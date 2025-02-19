@@ -13,6 +13,7 @@ export const useMQTTConnection = () => {
   const clientRef = useRef<MqttClient | null>(null);
   const pendingUpdatesRef = useRef<Record<string, DeviceData>>({});
   const lastUpdateTimeRef = useRef<number>(0);
+  const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleMessage = useCallback((topic: string, message: Buffer) => {
     if (isPaused) return;
@@ -56,6 +57,35 @@ export const useMQTTConnection = () => {
     }
   }, [isPaused]);
 
+  // Add heartbeat check
+  const checkConnection = useCallback(async () => {
+    try {
+      const response = await fetch('http://localhost:3000/api/health');
+      if (!response.ok) {
+        setConnectionStatus('error');
+      }
+    } catch (error) {
+      console.error('Backend connection lost:', error);
+      setConnectionStatus('error');
+    }
+  }, []);
+
+  // Start heartbeat when component mounts
+  useEffect(() => {
+    // Check connection immediately
+    checkConnection();
+
+    // Set up periodic checks
+    heartbeatRef.current = setInterval(checkConnection, 5000);
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
+    };
+  }, [checkConnection]);
+
+  // Update MQTT connection effect
   useEffect(() => {
     if (clientRef.current) {
       return;
@@ -101,6 +131,7 @@ export const useMQTTConnection = () => {
 
     client.on('close', () => {
       console.log('MQTT connection closed');
+      setConnectionStatus('error');
     });
 
     // Cleanup only when component unmounts

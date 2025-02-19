@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, CircularProgress, Chip, Alert } from '@mui/material';
+import { Box, CircularProgress, Chip, Alert, Paper, Typography } from '@mui/material';
 import mqtt from 'mqtt';
 
 interface DeviceData {
@@ -20,20 +20,48 @@ const DeviceTable = () => {
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
   const columns: GridColDef[] = [
-    { field: 'id', headerName: 'ID', width: 90 },
-    { field: 'name', headerName: 'Name', width: 130 },
+    { 
+      field: 'id', 
+      headerName: 'ID', 
+      width: 90,
+      renderCell: (params) => (
+        <Typography sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          #{params.row.id}
+        </Typography>
+      )
+    },
+    { 
+      field: 'name', 
+      headerName: 'Device Name', 
+      width: 150,
+      renderCell: (params) => (
+        <Typography sx={{ fontWeight: 500 }}>
+          {params.row.name}
+        </Typography>
+      )
+    },
     { 
       field: 'time', 
-      headerName: 'Time', 
-      width: 180,
-      renderCell: (params) => new Date(params.row.time || 0).toLocaleString()
+      headerName: 'Last Update Time', 
+      width: 200,
+      renderCell: (params) => (
+        <Typography>
+          {new Date(params.row.time || 0).toLocaleString()}
+        </Typography>
+      )
     },
     { 
       field: 'temp', 
       headerName: 'Temperature', 
-      width: 130,
+      width: 150,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          color: params.row.temp > 30 ? 'error.main' : 'success.main',
+          fontWeight: 500
+        }}>
           {params.row.temp !== undefined ? (
             `${params.row.temp.toFixed(1)}°C`
           ) : (
@@ -45,9 +73,15 @@ const DeviceTable = () => {
     { 
       field: 'hum', 
       headerName: 'Humidity', 
-      width: 130,
+      width: 150,
       renderCell: (params) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          color: 'info.main',
+          fontWeight: 500
+        }}>
           {params.row.hum !== undefined ? (
             `${params.row.hum.toFixed(1)}%`
           ) : (
@@ -67,6 +101,10 @@ const DeviceTable = () => {
             label={timeDiff < 10000 ? 'Live' : 'Stale'}
             color={timeDiff < 10000 ? 'success' : 'warning'}
             size="small"
+            sx={{ 
+              fontWeight: 'bold',
+              animation: timeDiff < 10000 ? 'pulse 2s infinite' : 'none'
+            }}
           />
         );
       }
@@ -128,44 +166,87 @@ const DeviceTable = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const LoadingOverlay = () => (
+    <Box sx={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      zIndex: 2,
+      gap: 2
+    }}>
+      <CircularProgress size={40} />
+      <Typography variant="h6" color="primary">
+        Loading Device Data...
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
+        Connecting to MQTT broker
+      </Typography>
+    </Box>
+  );
+
   return (
-    <Box sx={{ width: '100%' }}>
-      <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Chip
-          label={`Status: ${connectionStatus}`}
-          color={
-            connectionStatus === 'connected' ? 'success' :
-            connectionStatus === 'connecting' ? 'warning' : 'error'
-          }
-        />
-        {connectionStatus === 'connected' && (
-          <Chip
-            label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
-            color="info"
-          />
-        )}
-      </Box>
-
-      {connectionStatus === 'error' && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          Connection error. Please refresh the page.
-        </Alert>
-      )}
-
-      <Box sx={{ height: 400, width: '100%' }}>
-        {isLoading ? (
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%',
-            flexDirection: 'column',
-            gap: 2
-          }}>
-            <CircularProgress />
-            <Chip label="Connecting to MQTT broker..." />
+    <Box sx={{ 
+      width: '100%',
+      p: 3,
+      backgroundColor: '#f5f5f5',
+      minHeight: '100vh'
+    }}>
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
+            Device Monitor
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Chip
+              label={`Status: ${connectionStatus}`}
+              color={
+                connectionStatus === 'connected' ? 'success' :
+                connectionStatus === 'connecting' ? 'warning' : 'error'
+              }
+              sx={{ fontWeight: 'bold' }}
+            />
+            {connectionStatus === 'connected' && (
+              <Chip
+                label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
+                color="info"
+                sx={{ fontWeight: 'bold' }}
+              />
+            )}
           </Box>
-        ) : (
+        </Box>
+
+        {connectionStatus === 'error' && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            Connection error. Please refresh the page.
+          </Alert>
+        )}
+
+        <Box sx={{ 
+          height: 400, 
+          width: '100%',
+          position: 'relative',
+          '& .MuiDataGrid-root': {
+            border: 'none',
+            backgroundColor: 'white',
+            borderRadius: 1,
+            '& .MuiDataGrid-cell': {
+              borderColor: 'rgba(224, 224, 224, 0.5)'
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: 'primary.light',
+              color: 'white',
+              fontWeight: 'bold'
+            }
+          }
+        }}>
+          {isLoading && <LoadingOverlay />}
           <DataGrid
             rows={Object.values(devices)}
             columns={columns}
@@ -177,17 +258,18 @@ const DeviceTable = () => {
                 animation: 'fadeIn 0.5s'
               },
               '@keyframes fadeIn': {
-                '0%': {
-                  opacity: 0.5,
-                },
-                '100%': {
-                  opacity: 1,
-                }
+                '0%': { opacity: 0.5 },
+                '100%': { opacity: 1 }
+              },
+              '@keyframes pulse': {
+                '0%': { opacity: 1 },
+                '50%': { opacity: 0.7 },
+                '100%': { opacity: 1 }
               }
             }}
           />
-        )}
-      </Box>
+        </Box>
+      </Paper>
     </Box>
   );
 };

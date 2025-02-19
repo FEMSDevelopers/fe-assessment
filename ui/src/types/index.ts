@@ -3,7 +3,9 @@ export interface DeviceData {
   name: string;
   time?: number;
   temp?: number;
+  prevTemp?: number;
   hum?: number;
+  prevHum?: number;
   lastUpdated?: number;
 }
 

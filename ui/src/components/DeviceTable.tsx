@@ -2,7 +2,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress, keyframes } from '@mui/material';
 import mqtt from 'mqtt';
-import { PlayArrow, Pause, Refresh } from '@mui/icons-material';
+import { PlayArrow, Pause, Refresh, TrendingUp, TrendingDown } from '@mui/icons-material';
 import { useMQTTConnection } from '../hooks/useMQTTConnection';
 import { deviceApi } from '../api/deviceApi';
 import { GridContainer, DashboardContainer } from './styled';
@@ -16,7 +16,9 @@ interface DeviceData {
   name: string;
   time?: number;
   temp?: number;
+  prevTemp?: number;
   hum?: number;
+  prevHum?: number;
   lastUpdated?: number;
 }
 
@@ -273,7 +275,24 @@ const DeviceTable = () => {
           data-testid={`temp-cell-${params.row.id}`}
         >
           {params.row.temp !== undefined ? (
-            `${params.row.temp.toFixed(1)}°C`
+            <>
+              {`${params.row.temp.toFixed(1)}°C`}
+              {params.row.prevTemp !== undefined && (
+                <Box sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s',
+                  '&:hover': { opacity: 1 }
+                }}>
+                  {params.row.temp > params.row.prevTemp ? (
+                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
+                  ) : params.row.temp < params.row.prevTemp ? (
+                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
+                  ) : null}
+                </Box>
+              )}
+            </>
           ) : (
             <CircularProgress size={16} />
           )}
@@ -291,12 +310,32 @@ const DeviceTable = () => {
             alignItems: 'center', 
             gap: 1,
             color: 'info.main',
-            fontWeight: 500
+            fontWeight: 500,
+            padding: '4px 8px',
+            borderRadius: 1,
+            animation: `${fadeInAnimation} 1s ease-out`
           }}
           data-testid={`hum-cell-${params.row.id}`}
         >
           {params.row.hum !== undefined ? (
-            `${params.row.hum.toFixed(1)}%`
+            <>
+              {`${params.row.hum.toFixed(1)}%`}
+              {params.row.prevHum !== undefined && (
+                <Box sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s',
+                  '&:hover': { opacity: 1 }
+                }}>
+                  {params.row.hum > params.row.prevHum ? (
+                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
+                  ) : params.row.hum < params.row.prevHum ? (
+                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
+                  ) : null}
+                </Box>
+              )}
+            </>
           ) : (
             <CircularProgress size={16} />
           )}

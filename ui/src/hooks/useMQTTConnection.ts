@@ -18,11 +18,14 @@ export const useMQTTConnection = () => {
     const data = JSON.parse(message.toString()) as MQTTMessage;
     
     setDevices(prev => {
+      const currentDevice = prev[deviceId];
       const newDevices = {
         ...prev,
         [deviceId]: {
           id: deviceId,
           name: `Device ${deviceId}`,
+          prevTemp: currentDevice?.temp,
+          prevHum: currentDevice?.hum,
           ...data,
           lastUpdated: Date.now()
         }

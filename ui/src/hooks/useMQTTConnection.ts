@@ -20,19 +20,19 @@ export const useMQTTConnection = () => {
     try {
       const deviceId = topic.split('/')[1];
       const data = JSON.parse(message.toString()) as MQTTMessage;
-      const currentTime = Date.now();
-
-      // Collect the update
+      
+      // Collect updates
       pendingUpdatesRef.current[deviceId] = {
         id: deviceId,
         name: `Device ${deviceId}`,
         temp: data.temp,
         hum: data.hum,
-        time: data.time || currentTime
+        time: data.time
       };
 
-      // Only update if enough time has passed
-      if (currentTime - lastUpdateTimeRef.current >= 1900) {
+      const currentTime = Date.now();
+      // Only update every 2 seconds
+      if (currentTime - lastUpdateTimeRef.current >= 2000) {
         setDevices(prev => {
           const updates = Object.entries(pendingUpdatesRef.current).reduce((acc, [id, device]) => ({
             ...acc,

@@ -27,12 +27,12 @@ export const useMQTTConnection = () => {
         name: `Device ${deviceId}`,
         temp: data.temp,
         hum: data.hum,
-        time: data.time
+        time: Date.now(),
       };
 
       const currentTime = Date.now();
-      // Only update every 2 seconds
-      if (currentTime - lastUpdateTimeRef.current >= 2000) {
+      // Only update if not paused and enough time has passed
+      if (!isPaused && currentTime - lastUpdateTimeRef.current >= 2000) {
         setDevices(prev => {
           const updates = Object.entries(pendingUpdatesRef.current).reduce((acc, [id, device]) => ({
             ...acc,
@@ -88,8 +88,10 @@ export const useMQTTConnection = () => {
     });
 
     client.on('message', (topic, message) => {
-      console.log('Message received on topic:', topic);
-      handleMessage(topic, message);
+      if (!isPaused) {  // Only process messages if not paused
+        console.log('Message received on topic:', topic);
+        handleMessage(topic, message);
+      }
     });
 
     client.on('error', (err) => {
@@ -109,11 +111,10 @@ export const useMQTTConnection = () => {
         clientRef.current = null;
       }
     };
-  }, []); // Empty dependency array
+  }, [isPaused]); // Add isPaused to dependencies
 
   const togglePause = useCallback(async (shouldPause: boolean) => {
     try {
-      // Call the backend API to control publishing
       const response = await fetch('http://localhost:3000/api/publish/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -122,6 +123,10 @@ export const useMQTTConnection = () => {
 
       if (response.ok) {
         setIsPaused(shouldPause);
+        // Clear any pending updates
+        pendingUpdatesRef.current = {};
+        // Update last update time to prevent immediate update after unpause
+        lastUpdateTimeRef.current = Date.now();
       } else {
         console.error('Failed to toggle publishing state');
       }

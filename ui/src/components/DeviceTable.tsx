@@ -1,4 +1,4 @@
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useCallback } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress, keyframes } from '@mui/material';
 import mqtt from 'mqtt';
@@ -386,9 +386,18 @@ const getTrendIcon = (current: number, previous: number | undefined) => {
   return <TrendingFlatIcon className="trend-flat" />;
 };
 
-const DeviceTable = () => {
+const DEVICE_TIMEOUT = 5000; // Consider device inactive after 5 seconds
+
+const DeviceTable: React.FC = () => {
   const { devices, isLoading, connectionStatus, lastUpdate, isPaused, togglePause } = useMQTTConnection();
   const [connectionProgress, setConnectionProgress] = useState(0);
+
+  const getDeviceStatus = useCallback((deviceTime?: number) => {
+    if (isPaused) return 'paused';
+    if (!deviceTime) return 'inactive';
+    const timeSinceUpdate = Date.now() - deviceTime;
+    return timeSinceUpdate < DEVICE_TIMEOUT ? 'active' : 'inactive';
+  }, [isPaused]);
 
   // Define base columns
   const columns: GridColDef[] = [
@@ -454,15 +463,16 @@ const DeviceTable = () => {
       headerName: 'Status',
       width: 130,
       renderCell: (params) => {
-        const timeDiff = Date.now() - params.row.time;
-        const isActive = !isPaused && timeDiff < 10000;
-
+        const status = getDeviceStatus(params.row.time);
         return (
           <Chip
-            label={isActive ? 'Active' : 'Inactive'}
-            color={isActive ? 'success' : 'error'}
+            label={status}
+            color={
+              status === 'active' ? 'success' :
+              status === 'paused' ? 'warning' :
+              'default'
+            }
             size="small"
-            sx={{ animation: `${fadeInAnimation} 0.3s ease-in` }}
           />
         );
       }

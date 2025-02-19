@@ -48,3 +48,37 @@ export default tseslint.config({
   },
 })
 ```
+
+# MQTT Device Monitor
+
+## Testing
+
+This project uses Vitest and React Testing Library for testing. The tests cover:
+- Initial loading states
+- Connection status updates
+- Time updates
+- UI component rendering
+- Data grid structure
+
+### Running Tests
+
+```bash
+# Run tests in watch mode
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+### Test Structure
+
+Tests are located in `src/components/__tests__/` and cover:
+- Loading states
+- Connection handling
+- Time updates
+- UI components
+- Data grid functionality
+
+### Adding New Tests
+
+When adding new features, please add corresponding tests in the `__tests__` directory following the existing patterns.

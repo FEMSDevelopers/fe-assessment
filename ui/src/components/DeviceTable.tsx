@@ -27,9 +27,19 @@ const DeviceTable = () => {
       headerName: 'ID', 
       width: 90,
       renderCell: (params) => (
-        <Typography sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          #{params.row.id}
-        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          height: '100%'
+        }}>
+          <Typography sx={{ 
+            fontWeight: 'bold', 
+            color: 'primary.main',
+            fontSize: '0.875rem'
+          }}>
+            #{params.row.id}
+          </Typography>
+        </Box>
       )
     },
     { 
@@ -37,9 +47,18 @@ const DeviceTable = () => {
       headerName: 'Device Name', 
       width: 150,
       renderCell: (params) => (
-        <Typography sx={{ fontWeight: 500 }}>
-          {params.row.name}
-        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          height: '100%'
+        }}>
+          <Typography sx={{ 
+            fontWeight: 500,
+            fontSize: '0.875rem'
+          }}>
+            {params.row.name}
+          </Typography>
+        </Box>
       )
     },
     { 
@@ -47,9 +66,18 @@ const DeviceTable = () => {
       headerName: 'Last Update Time', 
       width: 200,
       renderCell: (params) => (
-        <Typography>
-          {new Date(params.row.time || 0).toLocaleString()}
-        </Typography>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          height: '100%'
+        }}>
+          <Typography sx={{ 
+            fontSize: '0.875rem',
+            color: 'text.secondary'
+          }}>
+            {new Date(params.row.time || 0).toLocaleString()}
+          </Typography>
+        </Box>
       )
     },
     { 
@@ -238,7 +266,40 @@ const DeviceTable = () => {
         )}
 
         {/* Data grid with real-time updates */}
-        <Box sx={{ height: 400, width: '100%', position: 'relative' }}>
+        <Box sx={{ 
+          height: 400, 
+          width: '100%', 
+          position: 'relative',
+          '& .MuiDataGrid-root': {
+            border: 'none',
+            backgroundColor: 'white',
+            borderRadius: 1,
+            '& .MuiDataGrid-cell': {
+              borderColor: 'rgba(224, 224, 224, 0.4)',
+              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center'
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              backgroundColor: 'primary.light',
+              color: 'white',
+              fontWeight: 'bold',
+              fontSize: '0.875rem',
+              minHeight: '56px'
+            },
+            '& .MuiDataGrid-row': {
+              '&:nth-of-type(even)': {
+                backgroundColor: 'rgba(0, 0, 0, 0.02)'
+              },
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)'
+              }
+            },
+            '& .MuiDataGrid-columnHeader': {
+              padding: '0 16px'
+            }
+          }
+        }}>
           {isLoading && <LoadingOverlay />}
           <DataGrid
             rows={Object.values(devices)}

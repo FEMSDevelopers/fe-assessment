@@ -9,8 +9,11 @@ export const useMQTTConnection = () => {
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [hasInitialData, setHasInitialData] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const handleMessage = useCallback((topic: string, message: Buffer) => {
+    if (isPaused) return;
+
     const deviceId = topic.split('/')[1];
     const data = JSON.parse(message.toString()) as MQTTMessage;
     
@@ -39,10 +42,27 @@ export const useMQTTConnection = () => {
         }
       }
 
+      if (!isPaused) {
+        setLastUpdate(Date.now());
+      }
+
       return newDevices;
     });
-    setLastUpdate(Date.now());
-  }, [hasInitialData, isConnected]);
+  }, [isPaused, hasInitialData, isConnected]);
+
+  const togglePause = useCallback(async (shouldPause: boolean) => {
+    setIsPaused(shouldPause);
+    
+    try {
+      await fetch('http://localhost:3000/api/publish/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !shouldPause })
+      });
+    } catch (error) {
+      console.error('Failed to toggle publishing:', error);
+    }
+  }, []);
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
@@ -82,6 +102,8 @@ export const useMQTTConnection = () => {
     devices: showData ? devices : {},
     isLoading: isLoading || !hasInitialData || !isConnected,
     connectionStatus: isLoading ? 'connecting' : connectionStatus,
-    lastUpdate
+    lastUpdate,
+    isPaused,
+    togglePause
   };
 }; 

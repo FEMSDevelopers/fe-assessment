@@ -182,8 +182,15 @@ const DeviceTableWrapper = () => (
 );
 
 const DeviceTable = () => {
-  const { devices, isLoading, connectionStatus, lastUpdate } = useMQTTConnection();
-  const [isPaused, setIsPaused] = useState(false);
+  const { 
+    devices, 
+    isLoading, 
+    connectionStatus, 
+    lastUpdate,
+    isPaused,
+    togglePause 
+  } = useMQTTConnection();
+  
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [connectionProgress, setConnectionProgress] = useState(0);
 
@@ -346,14 +353,7 @@ const DeviceTable = () => {
   }, [connectionStatus]);
 
   const handlePlayPause = () => {
-    const newPausedState = !isPaused;
-    setIsPaused(newPausedState);
-    
-    fetch('http://localhost:3000/api/publish/control', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled: !newPausedState })
-    });
+    togglePause(!isPaused);
   };
 
   const LiveIndicator = () => (

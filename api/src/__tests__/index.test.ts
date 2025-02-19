@@ -7,12 +7,11 @@ import { createServer } from '../index';
 // Mock MQTT
 vi.mock('mqtt', () => ({
   default: {
-    connect: vi.fn(() => ({
+    connect: vi.fn().mockReturnValue({
       on: vi.fn(),
-      publish: vi.fn(),
-      end: vi.fn(),
-    })),
-  },
+      publish: vi.fn()
+    })
+  }
 }));
 
 describe('MQTT API Server', () => {
@@ -102,7 +101,15 @@ describe('MQTT API Server', () => {
 
   describe('MQTT Connection', () => {
     it('connects to broker with correct options', () => {
-      expect(mqtt.connect).toHaveBeenCalledWith('wss://broker.emqx.io:8084/mqtt');
+      expect(mqtt.connect).toHaveBeenCalledWith(
+        'wss://broker.emqx.io:8084/mqtt',
+        {
+          clean: true,
+          connectTimeout: 30000,
+          keepalive: 60,
+          reconnectPeriod: 1000
+        }
+      );
     });
 
     it('sets up automatic publishing on connect', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress } from '@mui/material';
 import mqtt from 'mqtt';
@@ -7,6 +7,9 @@ import { useMQTTConnection } from '../hooks/useMQTTConnection';
 import { deviceApi } from '../api/deviceApi';
 import { GridContainer, DashboardContainer } from './styled';
 import { getDeviceColumns } from './DeviceGridColumns';
+import { Fade } from '@mui/material';
+import SensorsIcon from '@mui/icons-material/Sensors';
+import { DEVICE_TOPICS } from '../types';
 
 interface DeviceData {
   id: string;
@@ -16,6 +19,27 @@ interface DeviceData {
   hum?: number;
   lastUpdated?: number;
 }
+
+// Separate loading component for initial render
+const InitialLoadingState = () => (
+  <Box sx={{ 
+    width: '100%', 
+    height: '100vh', 
+    display: 'flex', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5'
+  }}>
+    <WelcomeOverlay />
+  </Box>
+);
+
+// Wrap main component with Suspense
+const DeviceTableWrapper = () => (
+  <Suspense fallback={<InitialLoadingState />}>
+    <DeviceTable />
+  </Suspense>
+);
 
 const DeviceTable = () => {
   const { devices, isLoading, connectionStatus, lastUpdate } = useMQTTConnection();
@@ -242,176 +266,270 @@ const DeviceTable = () => {
   };
 
   const WelcomeOverlay = () => (
-    <Box sx={{ 
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: 'white',
-      zIndex: 2,
-      gap: 3
-    }}>
-      <Typography variant="h4" color="primary" sx={{ fontWeight: 500 }}>
-        Device Monitor
-      </Typography>
-      
-      <Box sx={{ width: '300px', textAlign: 'center' }}>
-        <Typography variant="body1" color="text.secondary" gutterBottom>
-          Connecting to MQTT broker...
-        </Typography>
-        <LinearProgress 
-          variant="determinate" 
-          value={connectionProgress} 
-          sx={{ 
-            height: 8, 
-            borderRadius: 4,
+    <Fade in={true} timeout={1000}>
+      <Box sx={{ 
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(4px)',
+        zIndex: 2,
+        gap: 3
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center',
+          gap: 2 
+        }}>
+          <Box sx={{ 
+            position: 'relative',
+            width: 80,
+            height: 80,
             mb: 2
-          }} 
-        />
-        <Typography variant="caption" color="text.secondary">
-          {connectionProgress < 100 ? 'Establishing connection...' : 'Connected!'}
-        </Typography>
-      </Box>
+          }}>
+            <CircularProgress
+              size={80}
+              thickness={2}
+              sx={{
+                position: 'absolute',
+                color: 'primary.light'
+              }}
+            />
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}>
+              <SensorsIcon color="primary" sx={{ fontSize: 40 }} />
+            </Box>
+          </Box>
 
-      <CircularProgress size={40} />
-    </Box>
+          <Typography variant="h4" color="primary" sx={{ 
+            fontWeight: 500,
+            textAlign: 'center',
+            mb: 1
+          }}>
+            Device Monitor
+          </Typography>
+          
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            Initializing IoT Dashboard
+          </Typography>
+        </Box>
+        
+        <Box sx={{ 
+          width: '300px', 
+          textAlign: 'center',
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          p: 3,
+          borderRadius: 2,
+          boxShadow: 1
+        }}>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {connectionProgress < 100 ? 'Connecting to MQTT broker...' : 'Connected!'}
+          </Typography>
+          
+          <LinearProgress 
+            variant="determinate" 
+            value={connectionProgress} 
+            sx={{ 
+              height: 6, 
+              borderRadius: 3,
+              mb: 1,
+              mt: 2,
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 3,
+                backgroundImage: 'linear-gradient(45deg, #4CAF50 30%, #81C784 90%)',
+              }
+            }} 
+          />
+
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            mt: 1
+          }}>
+            <Typography variant="caption" color="text.secondary">
+              {connectionProgress}%
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {connectionProgress < 100 ? 'Establishing connection...' : 'Ready!'}
+            </Typography>
+          </Box>
+        </Box>
+
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 2, 
+          mt: 2,
+          flexWrap: 'wrap',
+          justifyContent: 'center'
+        }}>
+          {DEVICE_TOPICS.map((topic, index) => (
+            <Chip
+              key={topic}
+              label={`Device ${index + 1}`}
+              color="primary"
+              variant="outlined"
+              size="small"
+              sx={{ 
+                opacity: connectionProgress > (index + 1) * 25 ? 1 : 0.5,
+                transition: 'opacity 0.3s ease-in-out'
+              }}
+            />
+          ))}
+        </Box>
+      </Box>
+    </Fade>
   );
 
   return (
     <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-        {/* Header section with controls */}
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Always show WelcomeOverlay when loading or no data */}
+        {(isLoading || Object.keys(devices).length === 0) && <WelcomeOverlay />}
+        
+        {/* Only show content when we have data */}
+        <Fade in={!isLoading && Object.keys(devices).length > 0} timeout={500}>
           <Box>
-            <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
-              Device Monitor
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Chip
-                label={`Status: ${connectionStatus}`}
-                color={
-                  connectionStatus === 'connected' ? 'success' :
-                  connectionStatus === 'connecting' ? 'warning' : 'error'
-                }
-                sx={{ fontWeight: 'bold' }}
-              />
+            {/* Header section with controls */}
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
+                  Device Monitor
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Chip
+                    label={`Status: ${connectionStatus}`}
+                    color={
+                      connectionStatus === 'connected' ? 'success' :
+                      connectionStatus === 'connecting' ? 'warning' : 'error'
+                    }
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                  {connectionStatus === 'connected' && (
+                    <Chip
+                      label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
+                      color="info"
+                      sx={{ fontWeight: 'bold' }}
+                    />
+                  )}
+                </Box>
+              </Box>
+
+              {/* Playback controls */}
               {connectionStatus === 'connected' && (
-                <Chip
-                  label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
-                  color="info"
-                  sx={{ fontWeight: 'bold' }}
-                />
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <IconButton 
+                    onClick={handlePlayPause}
+                    color="primary"
+                    size="large"
+                    sx={{ 
+                      backgroundColor: 'primary.light',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                      }
+                    }}
+                  >
+                    {isPaused ? <PlayArrow /> : <Pause />}
+                  </IconButton>
+                  <IconButton 
+                    onClick={() => window.location.reload()}
+                    color="primary"
+                    size="large"
+                    sx={{ 
+                      backgroundColor: 'primary.light',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                      }
+                    }}
+                  >
+                    <Refresh />
+                  </IconButton>
+                </Box>
               )}
             </Box>
-          </Box>
 
-          {/* Playback controls */}
-          {connectionStatus === 'connected' && (
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <IconButton 
-                onClick={handlePlayPause}
-                color="primary"
-                size="large"
-                sx={{ 
+            {connectionStatus === 'error' && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                Connection error. Please refresh the page.
+              </Alert>
+            )}
+
+            {/* Data grid section */}
+            <Box sx={{ 
+              height: 400, 
+              width: '100%', 
+              position: 'relative',
+              '& .MuiDataGrid-root': {
+                border: 'none',
+                backgroundColor: 'white',
+                borderRadius: 1,
+                '& .MuiDataGrid-cell': {
+                  borderColor: 'rgba(224, 224, 224, 0.4)',
+                  padding: '8px 16px',
+                  display: 'flex',
+                  alignItems: 'center'
+                },
+                '& .MuiDataGrid-columnHeaders': {
                   backgroundColor: 'primary.light',
                   color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '0.875rem',
+                  minHeight: '56px'
+                },
+                '& .MuiDataGrid-row': {
+                  '&:nth-of-type(even)': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                  },
                   '&:hover': {
-                    backgroundColor: 'primary.main',
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                  }
+                },
+                '& .MuiDataGrid-columnHeader': {
+                  padding: '0 16px'
+                }
+              }
+            }}>
+              <DataGrid
+                rows={Object.values(devices)}
+                columns={columns}
+                getRowId={(row) => row.id}
+                disableRowSelectionOnClick
+                autoHeight
+                loading={Object.keys(devices).length === 0}
+                sx={{
+                  '& .MuiDataGrid-cell': {
+                    animation: 'fadeIn 0.5s'
+                  },
+                  '@keyframes fadeIn': {
+                    '0%': { opacity: 0.5 },
+                    '100%': { opacity: 1 }
+                  },
+                  '@keyframes pulse': {
+                    '0%': { opacity: 1 },
+                    '50%': { opacity: 0.7 },
+                    '100%': { opacity: 1 }
                   }
                 }}
-              >
-                {isPaused ? <PlayArrow /> : <Pause />}
-              </IconButton>
-              <IconButton 
-                onClick={() => window.location.reload()}
-                color="primary"
-                size="large"
-                sx={{ 
-                  backgroundColor: 'primary.light',
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: 'primary.main',
-                  }
-                }}
-              >
-                <Refresh />
-              </IconButton>
+              />
             </Box>
-          )}
-        </Box>
-
-        {connectionStatus === 'error' && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            Connection error. Please refresh the page.
-          </Alert>
-        )}
-
-        {/* Data grid section */}
-        <Box sx={{ 
-          height: 400, 
-          width: '100%', 
-          position: 'relative',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-            backgroundColor: 'white',
-            borderRadius: 1,
-            '& .MuiDataGrid-cell': {
-              borderColor: 'rgba(224, 224, 224, 0.4)',
-              padding: '8px 16px',
-              display: 'flex',
-              alignItems: 'center'
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: 'primary.light',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '0.875rem',
-              minHeight: '56px'
-            },
-            '& .MuiDataGrid-row': {
-              '&:nth-of-type(even)': {
-                backgroundColor: 'rgba(0, 0, 0, 0.02)'
-              },
-              '&:hover': {
-                backgroundColor: 'rgba(0, 0, 0, 0.04)'
-              }
-            },
-            '& .MuiDataGrid-columnHeader': {
-              padding: '0 16px'
-            }
-          }
-        }}>
-          {isLoading ? <WelcomeOverlay /> : null}
-          <DataGrid
-            rows={Object.values(devices)}
-            columns={columns}
-            getRowId={(row) => row.id}
-            disableRowSelectionOnClick
-            autoHeight
-            sx={{
-              '& .MuiDataGrid-cell': {
-                animation: 'fadeIn 0.5s'
-              },
-              '@keyframes fadeIn': {
-                '0%': { opacity: 0.5 },
-                '100%': { opacity: 1 }
-              },
-              '@keyframes pulse': {
-                '0%': { opacity: 1 },
-                '50%': { opacity: 0.7 },
-                '100%': { opacity: 1 }
-              }
-            }}
-          />
-        </Box>
+          </Box>
+        </Fade>
       </Paper>
     </Box>
   );
 };
 
-export default DeviceTable; 
+export default DeviceTableWrapper; 

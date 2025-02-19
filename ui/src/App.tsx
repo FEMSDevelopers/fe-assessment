@@ -1,5 +1,7 @@
 import { Container, Typography } from '@mui/material';
-import DeviceTable from './components/DeviceTable';
+import { lazy } from 'react';
+
+const DeviceTable = lazy(() => import('./components/DeviceTable'));
 
 function App() {
   return (

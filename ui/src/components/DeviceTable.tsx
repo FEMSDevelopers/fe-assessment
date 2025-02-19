@@ -104,7 +104,7 @@ const WelcomeOverlay = ({ connectionProgress }: { connectionProgress: number }) 
         boxShadow: 1
       }}>
         <Typography variant="body2" color="text.secondary" gutterBottom>
-          {connectionProgress < 100 ? 'Connecting to MQTT broker...' : 'Connected!'}
+          Connecting to MQTT broker...
         </Typography>
         
         <LinearProgress 
@@ -187,205 +187,42 @@ const DeviceTableWrapper = () => (
 const celsiusToFahrenheit = (celsius: number) => (celsius * 9/5) + 32;
 
 const DeviceTable = () => {
-  const { 
-    devices, 
-    isLoading, 
-    connectionStatus, 
-    lastUpdate,
-    isPaused,
-    togglePause 
-  } = useMQTTConnection();
+  const { devices, isLoading, connectionStatus, lastUpdate, isPaused, togglePause } = useMQTTConnection();
   
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [connectionProgress, setConnectionProgress] = useState(0);
 
   // Grid column definitions with custom cell renderers for formatting
   const columns: GridColDef[] = [
-    { 
-      field: 'id', 
-      headerName: 'ID', 
-      width: 90,
-      renderCell: (params) => (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          height: '100%'
-        }}>
-          <Typography sx={{ 
-            fontWeight: 'bold', 
-            color: 'primary.main',
-            fontSize: '0.875rem'
-          }}>
-            #{params.row.id}
-          </Typography>
-        </Box>
-      )
+    {
+      field: 'id',
+      headerName: 'ID',
+      width: 100,
     },
-    { 
-      field: 'name', 
-      headerName: 'Device Name', 
+    {
+      field: 'name',
+      headerName: 'Device Name',
       width: 150,
-      renderCell: (params) => (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          height: '100%'
-        }}>
-          <Typography sx={{ 
-            fontWeight: 500,
-            fontSize: '0.875rem'
-          }}>
-            {params.row.name}
-          </Typography>
-        </Box>
-      )
     },
     { 
-      field: 'time', 
-      headerName: 'Last Update Time', 
+      field: 'temp',
+      headerName: 'Temperature (°C)',
+      width: 150,
+      renderCell: (params) => `${params.row.temp.toFixed(1)}°C`
+    },
+    { 
+      field: 'hum',
+      headerName: 'Humidity (%)',
+      width: 150,
+      renderCell: (params) => `${params.row.hum.toFixed(1)}%`
+    },
+    {
+      field: 'time',
+      headerName: 'Last Update Time',
       width: 200,
-      renderCell: (params) => (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          height: '100%'
-        }}>
-          <Typography sx={{ 
-            fontSize: '0.875rem',
-            color: 'text.secondary'
-          }}>
-            {new Date(params.row.time || 0).toLocaleString()}
-          </Typography>
-        </Box>
-      )
-    },
-    { 
-      field: 'temp', 
-      headerName: 'Temperature (°C)', 
-      width: 150,
-      renderCell: (params) => (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            color: params.row.temp > 30 ? 'error.main' : 'success.main',
-            fontWeight: 500,
-            padding: '4px 8px',
-            borderRadius: 1,
-            animation: `${fadeInAnimation} 1s ease-out`
-          }}
-          data-testid={`temp-cell-${params.row.id}`}
-        >
-          {params.row.temp !== undefined ? (
-            <>
-              {`${params.row.temp.toFixed(1)}°C`}
-              {params.row.prevTemp !== undefined && (
-                <Box sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s',
-                  '&:hover': { opacity: 1 }
-                }}>
-                  {params.row.temp > params.row.prevTemp ? (
-                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
-                  ) : params.row.temp < params.row.prevTemp ? (
-                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
-                  ) : null}
-                </Box>
-              )}
-            </>
-          ) : (
-            <CircularProgress size={16} />
-          )}
-        </Box>
-      )
-    },
-    { 
-      field: 'tempF', 
-      headerName: 'Temperature (°F)', 
-      width: 150,
-      renderCell: (params) => (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            color: params.row.temp > 30 ? 'error.main' : 'success.main',
-            fontWeight: 500,
-            padding: '4px 8px',
-            borderRadius: 1,
-            animation: `${fadeInAnimation} 1s ease-out`
-          }}
-        >
-          {params.row.temp !== undefined ? (
-            <>
-              {`${celsiusToFahrenheit(params.row.temp).toFixed(1)}°F`}
-              {params.row.prevTemp !== undefined && (
-                <Box sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s',
-                  '&:hover': { opacity: 1 }
-                }}>
-                  {params.row.temp > params.row.prevTemp ? (
-                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
-                  ) : params.row.temp < params.row.prevTemp ? (
-                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
-                  ) : null}
-                </Box>
-              )}
-            </>
-          ) : (
-            <CircularProgress size={16} />
-          )}
-        </Box>
-      )
-    },
-    { 
-      field: 'hum', 
-      headerName: 'Humidity', 
-      width: 150,
-      renderCell: (params) => (
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 1,
-            color: 'info.main',
-            fontWeight: 500,
-            padding: '4px 8px',
-            borderRadius: 1,
-            animation: `${fadeInAnimation} 1s ease-out`
-          }}
-          data-testid={`hum-cell-${params.row.id}`}
-        >
-          {params.row.hum !== undefined ? (
-            <>
-              {`${params.row.hum.toFixed(1)}%`}
-              {params.row.prevHum !== undefined && (
-                <Box sx={{ 
-                  display: 'flex',
-                  alignItems: 'center',
-                  opacity: 0.7,
-                  transition: 'opacity 0.2s',
-                  '&:hover': { opacity: 1 }
-                }}>
-                  {params.row.hum > params.row.prevHum ? (
-                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
-                  ) : params.row.hum < params.row.prevHum ? (
-                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
-                  ) : null}
-                </Box>
-              )}
-            </>
-          ) : (
-            <CircularProgress size={16} />
-          )}
-        </Box>
-      )
+      valueFormatter: (params) => {
+        return new Date(params.value as number).toLocaleString();
+      }
     },
     {
       field: 'status',
@@ -459,155 +296,42 @@ const DeviceTable = () => {
     </Box>
   );
 
+  // Show loading state
+  if (isLoading) {
+    return (
+      <Box sx={{ width: '100%', textAlign: 'center', py: 4 }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Initializing IoT Dashboard
+        </Typography>
+        <Typography color="text.secondary">
+          Connecting to MQTT broker...
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-        {/* Use Fade for smooth transitions */}
-        <Fade in={isLoading || Object.keys(devices).length === 0} timeout={500} unmountOnExit>
-          <Box sx={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}>
-            <WelcomeOverlay connectionProgress={connectionProgress} />
-          </Box>
-        </Fade>
-
-        {/* Content with fade in */}
-        <Fade in={!isLoading && Object.keys(devices).length > 0} timeout={500}>
-          <Box>
-            {/* Header section with controls */}
-            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                  <Typography variant="h4" color="primary" sx={{ fontWeight: 500 }}>
-                    Device Monitor
-                  </Typography>
-                  {!isLoading && !isPaused && <LiveIndicator />}
-                </Box>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                  <Chip
-                    label={`Status: ${connectionStatus}`}
-                    color={
-                      connectionStatus === 'connected' ? 'success' :
-                      connectionStatus === 'connecting' ? 'warning' : 'error'
-                    }
-                    sx={{ fontWeight: 'bold' }}
-                  />
-                  {connectionStatus === 'connected' && (
-                    <Chip
-                      label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
-                      color="info"
-                      sx={{ fontWeight: 'bold' }}
-                    />
-                  )}
-                </Box>
-              </Box>
-
-              {/* Playback controls */}
-              {connectionStatus === 'connected' && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <IconButton 
-                    onClick={handlePlayPause}
-                    color="primary"
-                    size="large"
-                    sx={{ 
-                      backgroundColor: 'primary.light',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.main',
-                      }
-                    }}
-                  >
-                    {isPaused ? <PlayArrow /> : <Pause />}
-                  </IconButton>
-                  <IconButton 
-                    onClick={() => window.location.reload()}
-                    color="primary"
-                    size="large"
-                    sx={{ 
-                      backgroundColor: 'primary.light',
-                      color: 'white',
-                      '&:hover': {
-                        backgroundColor: 'primary.main',
-                      }
-                    }}
-                  >
-                    <Refresh />
-                  </IconButton>
-                </Box>
-              )}
-            </Box>
-
-            {connectionStatus === 'error' && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                Connection error. Please refresh the page.
-              </Alert>
-            )}
-
-            {/* Data grid section */}
-            <Box sx={{ 
-              height: 400, 
-              width: '100%', 
-              position: 'relative',
-              '& .MuiDataGrid-root': {
-                border: 'none',
-                backgroundColor: 'white',
-                borderRadius: 1,
-                '& .MuiDataGrid-cell': {
-                  borderColor: 'rgba(224, 224, 224, 0.4)',
-                  padding: '8px 16px',
-                  display: 'flex',
-                  alignItems: 'center'
-                },
-                '& .MuiDataGrid-columnHeaders': {
-                  backgroundColor: 'primary.light',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '0.875rem',
-                  minHeight: '56px'
-                },
-                '& .MuiDataGrid-row': {
-                  '&:nth-of-type(even)': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                  },
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  },
-                  transition: 'background-color 0.3s ease'
-                },
-                '& .MuiDataGrid-columnHeader': {
-                  padding: '0 16px'
-                }
-              }
-            }}>
-              <DataGrid
-                rows={Object.values(devices)}
-                columns={columns}
-                getRowId={(row) => row.id}
-                disableRowSelectionOnClick
-                autoHeight
-                loading={Object.keys(devices).length === 0}
-                sx={{
-                  '& .MuiDataGrid-cell': {
-                    animation: `${fadeInAnimation} 1s ease-out`,
-                  },
-                  '& .MuiDataGrid-row': {
-                    '&:nth-of-type(even)': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.02)'
-                    },
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                    },
-                    transition: 'background-color 0.3s ease'
-                  },
-                  '@keyframes pulse': {
-                    '0%': { opacity: 1 },
-                    '50%': { opacity: 0.7 },
-                    '100%': { opacity: 1 }
-                  }
-                }}
-              />
-            </Box>
-          </Box>
-        </Fade>
-      </Paper>
+    <Box sx={{ width: '100%' }}>
+      <DataGrid
+        rows={Object.values(devices)}
+        columns={columns}
+        autoHeight
+        disableRowSelectionOnClick
+        getRowId={(row) => row.id}
+        initialState={{
+          pagination: { paginationModel: { pageSize: 100 } },
+          columns: {
+            columnVisibilityModel: {
+              id: true,
+              name: true,
+              temp: true,
+              hum: true
+            }
+          }
+        }}
+        hideFooter
+      />
     </Box>
   );
 };

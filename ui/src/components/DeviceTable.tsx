@@ -183,6 +183,9 @@ const DeviceTableWrapper = () => (
   </Suspense>
 );
 
+// Add a utility function for conversion
+const celsiusToFahrenheit = (celsius: number) => (celsius * 9/5) + 32;
+
 const DeviceTable = () => {
   const { 
     devices, 
@@ -258,7 +261,7 @@ const DeviceTable = () => {
     },
     { 
       field: 'temp', 
-      headerName: 'Temperature', 
+      headerName: 'Temperature (°C)', 
       width: 150,
       renderCell: (params) => (
         <Box 
@@ -277,6 +280,48 @@ const DeviceTable = () => {
           {params.row.temp !== undefined ? (
             <>
               {`${params.row.temp.toFixed(1)}°C`}
+              {params.row.prevTemp !== undefined && (
+                <Box sx={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  opacity: 0.7,
+                  transition: 'opacity 0.2s',
+                  '&:hover': { opacity: 1 }
+                }}>
+                  {params.row.temp > params.row.prevTemp ? (
+                    <TrendingUp sx={{ fontSize: 16, color: 'success.main' }} />
+                  ) : params.row.temp < params.row.prevTemp ? (
+                    <TrendingDown sx={{ fontSize: 16, color: 'error.main' }} />
+                  ) : null}
+                </Box>
+              )}
+            </>
+          ) : (
+            <CircularProgress size={16} />
+          )}
+        </Box>
+      )
+    },
+    { 
+      field: 'tempF', 
+      headerName: 'Temperature (°F)', 
+      width: 150,
+      renderCell: (params) => (
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            color: params.row.temp > 30 ? 'error.main' : 'success.main',
+            fontWeight: 500,
+            padding: '4px 8px',
+            borderRadius: 1,
+            animation: `${fadeInAnimation} 1s ease-out`
+          }}
+        >
+          {params.row.temp !== undefined ? (
+            <>
+              {`${celsiusToFahrenheit(params.row.temp).toFixed(1)}°F`}
               {params.row.prevTemp !== undefined && (
                 <Box sx={{ 
                   display: 'flex',

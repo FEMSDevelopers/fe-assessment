@@ -55,13 +55,16 @@ const DeviceTable = () => {
       headerName: 'Temperature', 
       width: 150,
       renderCell: (params) => (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          color: params.row.temp > 30 ? 'error.main' : 'success.main',
-          fontWeight: 500
-        }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            color: params.row.temp > 30 ? 'error.main' : 'success.main',
+            fontWeight: 500
+          }}
+          data-testid={`temp-cell-${params.row.id}`}
+        >
           {params.row.temp !== undefined ? (
             `${params.row.temp.toFixed(1)}°C`
           ) : (
@@ -75,13 +78,16 @@ const DeviceTable = () => {
       headerName: 'Humidity', 
       width: 150,
       renderCell: (params) => (
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1,
-          color: 'info.main',
-          fontWeight: 500
-        }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1,
+            color: 'info.main',
+            fontWeight: 500
+          }}
+          data-testid={`hum-cell-${params.row.id}`}
+        >
           {params.row.hum !== undefined ? (
             `${params.row.hum.toFixed(1)}%`
           ) : (

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, CircularProgress, Chip, Alert, Paper, Typography } from '@mui/material';
+import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress } from '@mui/material';
 import mqtt from 'mqtt';
+import { PlayArrow, Pause, Refresh } from '@mui/icons-material';
 
 interface DeviceData {
   id: string;
@@ -19,6 +20,8 @@ const DeviceTable = () => {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const [isPaused, setIsPaused] = useState(false);
+  const [connectionProgress, setConnectionProgress] = useState(0);
 
   // Grid column definitions with custom cell renderers for formatting
   const columns: GridColDef[] = [
@@ -206,7 +209,39 @@ const DeviceTable = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const LoadingOverlay = () => (
+  // Simulated connection progress
+  useEffect(() => {
+    if (isLoading && connectionStatus === 'connecting') {
+      const interval = setInterval(() => {
+        setConnectionProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + 10;
+        });
+      }, 500);
+
+      return () => clearInterval(interval);
+    }
+  }, [isLoading, connectionStatus]);
+
+  // Reset progress when connection is established
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      setConnectionProgress(100);
+    }
+  }, [connectionStatus]);
+
+  const handlePlayPause = () => {
+    const newPausedState = !isPaused;
+    setIsPaused(newPausedState);
+    
+    fetch('http://localhost:3000/api/publish/control', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: !newPausedState })
+    });
+  };
+
+  const WelcomeOverlay = () => (
     <Box sx={{ 
       position: 'absolute',
       top: 0,
@@ -217,46 +252,97 @@ const DeviceTable = () => {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+      backgroundColor: 'white',
       zIndex: 2,
-      gap: 2
+      gap: 3
     }}>
+      <Typography variant="h4" color="primary" sx={{ fontWeight: 500 }}>
+        Device Monitor
+      </Typography>
+      
+      <Box sx={{ width: '300px', textAlign: 'center' }}>
+        <Typography variant="body1" color="text.secondary" gutterBottom>
+          Connecting to MQTT broker...
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={connectionProgress} 
+          sx={{ 
+            height: 8, 
+            borderRadius: 4,
+            mb: 2
+          }} 
+        />
+        <Typography variant="caption" color="text.secondary">
+          {connectionProgress < 100 ? 'Establishing connection...' : 'Connected!'}
+        </Typography>
+      </Box>
+
       <CircularProgress size={40} />
-      <Typography variant="h6" color="primary">
-        Loading Device Data...
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        Connecting to MQTT broker
-      </Typography>
     </Box>
   );
 
   return (
     <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
-      <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
-        {/* Status display section */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
-            Device Monitor
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <Chip
-              label={`Status: ${connectionStatus}`}
-              color={
-                connectionStatus === 'connected' ? 'success' :
-                connectionStatus === 'connecting' ? 'warning' : 'error'
-              }
-              sx={{ fontWeight: 'bold' }}
-            />
-            {/* Show last update time only when connected */}
-            {connectionStatus === 'connected' && (
+      <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
+        {/* Header section with controls */}
+        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
+              Device Monitor
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <Chip
-                label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
-                color="info"
+                label={`Status: ${connectionStatus}`}
+                color={
+                  connectionStatus === 'connected' ? 'success' :
+                  connectionStatus === 'connecting' ? 'warning' : 'error'
+                }
                 sx={{ fontWeight: 'bold' }}
               />
-            )}
+              {connectionStatus === 'connected' && (
+                <Chip
+                  label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
+                  color="info"
+                  sx={{ fontWeight: 'bold' }}
+                />
+              )}
+            </Box>
           </Box>
+
+          {/* Playback controls */}
+          {connectionStatus === 'connected' && (
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <IconButton 
+                onClick={handlePlayPause}
+                color="primary"
+                size="large"
+                sx={{ 
+                  backgroundColor: 'primary.light',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.main',
+                  }
+                }}
+              >
+                {isPaused ? <PlayArrow /> : <Pause />}
+              </IconButton>
+              <IconButton 
+                onClick={() => window.location.reload()}
+                color="primary"
+                size="large"
+                sx={{ 
+                  backgroundColor: 'primary.light',
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: 'primary.main',
+                  }
+                }}
+              >
+                <Refresh />
+              </IconButton>
+            </Box>
+          )}
         </Box>
 
         {connectionStatus === 'error' && (
@@ -265,7 +351,7 @@ const DeviceTable = () => {
           </Alert>
         )}
 
-        {/* Data grid with real-time updates */}
+        {/* Data grid section */}
         <Box sx={{ 
           height: 400, 
           width: '100%', 
@@ -300,7 +386,7 @@ const DeviceTable = () => {
             }
           }
         }}>
-          {isLoading && <LoadingOverlay />}
+          {isLoading ? <WelcomeOverlay /> : null}
           <DataGrid
             rows={Object.values(devices)}
             columns={columns}

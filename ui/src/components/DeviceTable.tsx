@@ -140,7 +140,7 @@ const DeviceTable = () => {
         />
         {connectionStatus === 'connected' && (
           <Chip
-            label={`Last update: ${((currentTime - lastUpdate) / 1000).toFixed(0)}s ago`}
+            label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
             color="info"
           />
         )}

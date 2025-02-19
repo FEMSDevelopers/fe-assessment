@@ -8,12 +8,17 @@ export class MQTTController {
 
   public handlePublishControl(req: Request, res: Response): void {
     const { enabled } = req.body;
+    
     if (enabled) {
       this.mqttService.startPublishing();
     } else {
       this.mqttService.stopPublishing();
     }
-    res.json({ success: true, publishing: enabled });
+    
+    res.json({ 
+      success: true, 
+      publishing: enabled 
+    });
   }
 
   public async handleDevicePublish(req: Request, res: Response): Promise<void> {

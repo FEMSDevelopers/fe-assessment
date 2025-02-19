@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import mqtt from 'mqtt';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import mqtt, { MqttClient } from 'mqtt';
 import { DeviceData, ConnectionStatus, MQTT_CONFIG, DEVICE_TOPICS, MQTTMessage } from '../types';
 
 export const useMQTTConnection = () => {
@@ -7,104 +7,129 @@ export const useMQTTConnection = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
-  const [hasInitialData, setHasInitialData] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Use ref to maintain client instance
+  const clientRef = useRef<MqttClient | null>(null);
 
   const handleMessage = useCallback((topic: string, message: Buffer) => {
     if (isPaused) return;
 
-    const deviceId = topic.split('/')[1];
-    const data = JSON.parse(message.toString()) as MQTTMessage;
-    
-    setDevices(prev => {
-      const currentDevice = prev[deviceId];
-      const newDevices = {
-        ...prev,
-        [deviceId]: {
-          id: deviceId,
-          name: `Device ${deviceId}`,
-          prevTemp: currentDevice?.temp,
-          prevHum: currentDevice?.hum,
-          ...data,
-          lastUpdated: Date.now()
-        }
-      };
-
-      // Check if we have data for all devices
-      const hasAllDevices = DEVICE_TOPICS.every(topic => {
-        const id = topic.split('/')[1];
-        return newDevices[id]?.temp !== undefined;
-      });
-
-      if (hasAllDevices && !hasInitialData) {
-        setHasInitialData(true);
-        // Only stop loading when we have both connection and data
-        if (isConnected) {
-          setTimeout(() => setIsLoading(false), 1000);
-        }
-      }
-
-      if (!isPaused) {
-        setLastUpdate(Date.now());
-      }
-
-      return newDevices;
-    });
-  }, [isPaused, hasInitialData, isConnected]);
-
-  const togglePause = useCallback(async (shouldPause: boolean) => {
-    setIsPaused(shouldPause);
-    
     try {
-      await fetch('http://localhost:3000/api/publish/control', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: !shouldPause })
+      const deviceId = topic.split('/')[1];
+      const data = JSON.parse(message.toString()) as MQTTMessage;
+      
+      console.log('Received MQTT message:', { topic, deviceId, data });
+
+      setDevices(prev => {
+        const currentDevice = prev[deviceId];
+        return {
+          ...prev,
+          [deviceId]: {
+            id: deviceId,
+            name: `Device ${deviceId}`,
+            prevTemp: currentDevice?.temp,
+            prevHum: currentDevice?.hum,
+            ...data,
+            time: data.time || Date.now()
+          }
+        };
       });
+
+      setLastUpdate(Date.now());
     } catch (error) {
-      console.error('Failed to toggle publishing:', error);
+      console.error('Error handling MQTT message:', error);
     }
-  }, []);
+  }, [isPaused]);
 
   useEffect(() => {
-    const client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
-    let initialDataTimeout: NodeJS.Timeout;
+    if (clientRef.current) {
+      return;
+    }
+
+    console.log('Connecting to MQTT broker...');
+    const client = mqtt.connect(MQTT_CONFIG.url, {
+      ...MQTT_CONFIG.options,
+      clean: true,
+      reconnectPeriod: 1000,
+    });
+    
+    clientRef.current = client;
 
     client.on('connect', () => {
       console.log('Connected to MQTT broker');
       setConnectionStatus('connected');
-      setIsConnected(true);
-      DEVICE_TOPICS.forEach(topic => client.subscribe(topic));
       
-      // Set a maximum wait time for initial data
-      initialDataTimeout = setTimeout(() => {
-        if (!hasInitialData) {
-          setHasInitialData(true);
-          setIsLoading(false);
-        }
-      }, 7000); // Increased timeout for better UX
+      // Subscribe to all device topics
+      DEVICE_TOPICS.forEach(topic => {
+        console.log('Subscribing to:', topic);
+        client.subscribe(topic, (err) => {
+          if (err) {
+            console.error('Subscription error:', err);
+          } else {
+            console.log('Subscribed to:', topic);
+          }
+        });
+      });
     });
 
-    client.on('message', handleMessage);
-    client.on('error', () => {
+    client.on('message', (topic, message) => {
+      console.log('Message received on topic:', topic);
+      handleMessage(topic, message);
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT client error:', err);
       setConnectionStatus('error');
-      setIsLoading(false);
     });
 
-    return () => {
-      clearTimeout(initialDataTimeout);
-      client.end();
-    };
-  }, [handleMessage, hasInitialData]);
+    client.on('close', () => {
+      console.log('MQTT connection closed');
+    });
 
-  // Only show data when we have both connection and initial data
-  const showData = !isLoading && hasInitialData && isConnected;
+    // Cleanup only when component unmounts
+    return () => {
+      console.log('Cleaning up MQTT connection');
+      if (clientRef.current) {
+        clientRef.current.end(true);
+        clientRef.current = null;
+      }
+    };
+  }, []); // Empty dependency array
+
+  const togglePause = useCallback(async (shouldPause: boolean) => {
+    try {
+      // Call the backend API to control publishing
+      const response = await fetch('http://localhost:3000/api/publish/control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !shouldPause })
+      });
+
+      if (response.ok) {
+        setIsPaused(shouldPause);
+      } else {
+        console.error('Failed to toggle publishing state');
+      }
+    } catch (error) {
+      console.error('Error toggling publish state:', error);
+    }
+  }, []);
+
+  // Set loading to false after a short delay when connected
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [connectionStatus]);
 
   return {
-    devices: showData ? devices : {},
-    isLoading: isLoading || !hasInitialData || !isConnected,
-    connectionStatus: isLoading ? 'connecting' : connectionStatus,
+    devices,
+    isLoading,
+    connectionStatus,
     lastUpdate,
     isPaused,
     togglePause

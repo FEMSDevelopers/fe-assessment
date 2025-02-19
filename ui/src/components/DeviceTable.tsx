@@ -10,6 +10,12 @@ import { getDeviceColumns } from './DeviceGridColumns';
 import { Fade } from '@mui/material';
 import SensorsIcon from '@mui/icons-material/Sensors';
 import { DEVICE_TOPICS } from '../types';
+import { styled } from '@mui/material/styles';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
+import TrendingFlatIcon from '@mui/icons-material/TrendingFlat';
+import DevicesIcon from '@mui/icons-material/Devices';
+import SignalCellularAltIcon from '@mui/icons-material/SignalCellularAlt';
 
 interface DeviceData {
   id: string;
@@ -33,6 +39,188 @@ const fadeInAnimation = keyframes`
   0% { background-color: rgba(76, 175, 80, 0.1); }
   100% { background-color: transparent; }
 `;
+
+const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
+  border: 'none',
+  backgroundColor: 'white',
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[2],
+  '& .MuiDataGrid-cell': {
+    borderColor: theme.palette.grey[200],
+  },
+  '& .MuiDataGrid-columnHeader': {
+    backgroundColor: theme.palette.grey[50],
+    borderBottom: `1px solid ${theme.palette.grey[200]}`,
+  },
+  '& .trend-up': {
+    color: theme.palette.success.main,
+  },
+  '& .trend-down': {
+    color: theme.palette.error.main,
+  },
+  '& .trend-flat': {
+    color: theme.palette.grey[500],
+  }
+}));
+
+const LoadingOverlay = styled(Box)(({ theme }) => ({
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  zIndex: 1,
+  gap: theme.spacing(2),
+}));
+
+const LoadingContainer = styled(Box)(({ theme }) => ({
+  width: '100%',
+  height: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: theme.palette.background.default,
+  gap: theme.spacing(4),
+  padding: theme.spacing(3),
+}));
+
+const ConnectionCard = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius * 2,
+  padding: theme.spacing(4),
+  width: '100%',
+  maxWidth: 600,
+  boxShadow: theme.shadows[3],
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(3),
+}));
+
+const DeviceStatusGrid = styled(Box)(({ theme }) => ({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  gap: theme.spacing(2),
+  width: '100%',
+}));
+
+// Loading Screen Component
+const LoadingScreen = ({ connectionProgress }: { connectionProgress: number }) => {
+  const [deviceStatuses, setDeviceStatuses] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    DEVICE_TOPICS.forEach((topic, index) => {
+      const delay = index * 1000;
+      setTimeout(() => {
+        setDeviceStatuses(prev => ({
+          ...prev,
+          [topic]: Math.min(100, connectionProgress + Math.random() * 20)
+        }));
+      }, delay);
+    });
+  }, [connectionProgress]);
+
+  return (
+    <LoadingContainer>
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Box sx={{
+          animation: `${pulseAnimation} 2s infinite`,
+          display: 'inline-block',
+          mb: 2
+        }}>
+          <DevicesIcon sx={{ fontSize: 60, color: 'primary.main' }} />
+        </Box>
+        <Typography variant="h4" gutterBottom color="primary.main" fontWeight="bold">
+          IoT Device Monitor
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary">
+          Initializing System Components
+        </Typography>
+      </Box>
+
+      <ConnectionCard>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <SignalCellularAltIcon color="primary" />
+          <Typography variant="h6">
+            Establishing MQTT Connection
+          </Typography>
+        </Box>
+
+        <Box sx={{ mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Broker Connection
+            </Typography>
+            <Typography variant="body2" color="primary">
+              {connectionProgress}%
+            </Typography>
+          </Box>
+          <LinearProgress 
+            variant="determinate" 
+            value={connectionProgress}
+            sx={{ 
+              height: 8, 
+              borderRadius: 4,
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 4,
+                backgroundImage: 'linear-gradient(45deg, #2196F3 30%, #90CAF9 90%)',
+              }
+            }}
+          />
+        </Box>
+
+        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2 }}>
+          Device Connection Status
+        </Typography>
+
+        <DeviceStatusGrid>
+          {DEVICE_TOPICS.map((topic, index) => (
+            <Box
+              key={topic}
+              sx={{
+                p: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.default'
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <SensorsIcon color="primary" sx={{ fontSize: 20 }} />
+                <Typography variant="subtitle2">
+                  Device {index + 1}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {topic}
+                </Typography>
+                <Typography variant="caption" color="primary">
+                  {deviceStatuses[topic]?.toFixed(0) || 0}%
+                </Typography>
+              </Box>
+              <LinearProgress 
+                variant="determinate" 
+                value={deviceStatuses[topic] || 0}
+                sx={{ 
+                  height: 4, 
+                  borderRadius: 2,
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                }}
+              />
+            </Box>
+          ))}
+        </DeviceStatusGrid>
+      </ConnectionCard>
+    </LoadingContainer>
+  );
+};
 
 // Move WelcomeOverlay component definition before it's used
 const WelcomeOverlay = ({ connectionProgress }: { connectionProgress: number }) => (
@@ -186,59 +374,90 @@ const DeviceTableWrapper = () => (
 // Add a utility function for conversion
 const celsiusToFahrenheit = (celsius: number) => (celsius * 9/5) + 32;
 
+const getTrendIcon = (current: number, previous: number | undefined) => {
+  if (!previous) return <TrendingFlatIcon className="trend-flat" />;
+  if (current > previous) return <TrendingUpIcon className="trend-up" />;
+  if (current < previous) return <TrendingDownIcon className="trend-down" />;
+  return <TrendingFlatIcon className="trend-flat" />;
+};
+
 const DeviceTable = () => {
   const { devices, isLoading, connectionStatus, lastUpdate, isPaused, togglePause } = useMQTTConnection();
-  
-  const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [connectionProgress, setConnectionProgress] = useState(0);
 
-  // Grid column definitions with custom cell renderers for formatting
+  // Define base columns
   const columns: GridColDef[] = [
     {
       field: 'id',
-      headerName: 'ID',
+      headerName: 'Device ID',
       width: 100,
     },
     {
       field: 'name',
-      headerName: 'Device Name',
-      width: 150,
+      headerName: 'Name',
+      width: 130,
     },
     { 
       field: 'temp',
       headerName: 'Temperature (°C)',
-      width: 150,
-      renderCell: (params) => `${params.row.temp.toFixed(1)}°C`
+      width: 160,
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography>
+            {params.row.temp?.toFixed(1)}°C
+          </Typography>
+          {getTrendIcon(params.row.temp, params.row.prevTemp)}
+        </Box>
+      )
+    },
+    {
+      field: 'tempF',
+      headerName: 'Temperature (°F)',
+      width: 160,
+      valueGetter: (params) => params.row.temp ? celsiusToFahrenheit(params.row.temp) : null,
+      renderCell: (params) => (
+        <Typography>
+          {params.value?.toFixed(1)}°F
+        </Typography>
+      )
     },
     { 
       field: 'hum',
-      headerName: 'Humidity (%)',
+      headerName: 'Humidity',
       width: 150,
-      renderCell: (params) => `${params.row.hum.toFixed(1)}%`
+      renderCell: (params) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography>
+            {params.row.hum?.toFixed(1)}%
+          </Typography>
+          {getTrendIcon(params.row.hum, params.row.prevHum)}
+        </Box>
+      )
     },
     {
       field: 'time',
-      headerName: 'Last Update Time',
-      width: 200,
-      valueFormatter: (params) => {
-        return new Date(params.value as number).toLocaleString();
-      }
+      headerName: 'Last Update',
+      width: 180,
+      renderCell: (params) => (
+        <Typography>
+          {new Date(params.row.time).toLocaleTimeString()}
+        </Typography>
+      )
     },
     {
       field: 'status',
       headerName: 'Status',
       width: 130,
       renderCell: (params) => {
-        const timeDiff = Date.now() - (params.row.time || 0);
+        const timeDiff = Date.now() - params.row.time;
+        const isActive = !isPaused && timeDiff < 10000;
+
         return (
-          <Chip 
-            label={timeDiff < 10000 ? 'Live' : 'Stale'}
-            color={timeDiff < 10000 ? 'success' : 'warning'}
+          <Chip
+            label={isActive ? 'Active' : 'Inactive'}
+            color={isActive ? 'success' : 'error'}
             size="small"
-            sx={{ 
-              fontWeight: 'bold',
-              animation: timeDiff < 10000 ? 'pulse 2s infinite' : 'none'
-            }}
+            sx={{ animation: `${fadeInAnimation} 0.3s ease-in` }}
           />
         );
       }
@@ -247,15 +466,7 @@ const DeviceTable = () => {
 
   // Keep these effects
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (isLoading && connectionStatus === 'connecting') {
+    if (isLoading) {
       const interval = setInterval(() => {
         setConnectionProgress(prev => {
           if (prev >= 90) return prev;
@@ -264,14 +475,15 @@ const DeviceTable = () => {
       }, 500);
 
       return () => clearInterval(interval);
-    }
-  }, [isLoading, connectionStatus]);
-
-  useEffect(() => {
-    if (connectionStatus === 'connected') {
+    } else {
       setConnectionProgress(100);
     }
-  }, [connectionStatus]);
+  }, [isLoading]);
+
+  // Debug the devices data
+  useEffect(() => {
+    console.log('Current devices:', devices);
+  }, [devices]);
 
   const handlePlayPause = () => {
     togglePause(!isPaused);
@@ -296,41 +508,44 @@ const DeviceTable = () => {
     </Box>
   );
 
-  // Show loading state
   if (isLoading) {
-    return (
-      <Box sx={{ width: '100%', textAlign: 'center', py: 4 }}>
-        <CircularProgress />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Initializing IoT Dashboard
-        </Typography>
-        <Typography color="text.secondary">
-          Connecting to MQTT broker...
-        </Typography>
-      </Box>
-    );
+    return <LoadingScreen connectionProgress={connectionProgress} />;
   }
 
   return (
-    <Box sx={{ width: '100%' }}>
-      <DataGrid
+    <Box sx={{ height: 600, width: '100%', position: 'relative' }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+        <Box>
+          <Typography variant="h6" gutterBottom>
+            Device Monitoring
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Last updated: {new Date(lastUpdate).toLocaleTimeString()}
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Chip
+            label={`Status: ${connectionStatus}`}
+            color={connectionStatus === 'connected' ? 'success' : 'error'}
+          />
+          <Chip
+            label={isPaused ? 'Resume' : 'Pause'}
+            onClick={() => togglePause(!isPaused)}
+            color={isPaused ? 'warning' : 'primary'}
+            clickable
+          />
+        </Box>
+      </Box>
+      <StyledDataGrid
         rows={Object.values(devices)}
         columns={columns}
         autoHeight
         disableRowSelectionOnClick
         getRowId={(row) => row.id}
         initialState={{
-          pagination: { paginationModel: { pageSize: 100 } },
-          columns: {
-            columnVisibilityModel: {
-              id: true,
-              name: true,
-              temp: true,
-              hum: true
-            }
-          }
+          pagination: { paginationModel: { pageSize: 10 } },
         }}
-        hideFooter
+        pageSizeOptions={[5, 10, 25]}
       />
     </Box>
   );

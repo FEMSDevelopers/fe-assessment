@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
+    "publisher": "ts-node src/mqtt/index.ts",
     "test": "vitest",
     "test:coverage": "vitest run --coverage"
   },

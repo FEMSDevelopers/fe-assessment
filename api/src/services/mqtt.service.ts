@@ -8,16 +8,15 @@ export class MQTTService {
   private isPublishing: boolean = false;
 
   constructor() {
-    this.client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-      clean: true,
-      connectTimeout: 30000,
-      keepalive: 60,
-      reconnectPeriod: 1000
-    });
+    this.client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
 
     this.client.on('connect', () => {
       console.log('Connected to MQTT broker');
       this.startPublishing();
+    });
+
+    this.client.on('error', (error) => {
+      console.error('MQTT client error:', error);
     });
   }
 
@@ -30,25 +29,18 @@ export class MQTTService {
   }
 
   public startPublishing(): void {
-    if (this.isPublishing) {
-      return;
-    }
+    if (this.isPublishing) return;
 
+    console.log('Starting to publish data...'); // Debug log
     this.isPublishing = true;
 
-    // Clear any existing interval
-    if (this.publishInterval) {
-      clearInterval(this.publishInterval);
-      this.publishInterval = null;
-    }
-
-    // Set up new interval
     this.publishInterval = setInterval(() => {
-      DEVICE_TOPICS.forEach((topic: string) => {
+      DEVICE_TOPICS.forEach((topic) => {
         const data = this.generateDeviceData();
+        console.log('Publishing to topic:', topic, 'data:', data); // Debug log
         this.publish(topic, data);
       });
-    }, 5000);
+    }, 2000);
   }
 
   public stopPublishing(): void {

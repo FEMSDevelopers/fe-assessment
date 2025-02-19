@@ -13,12 +13,14 @@ interface DeviceData {
 }
 
 const DeviceTable = () => {
+  // State for device data using Record type for O(1) lookups by deviceId
   const [devices, setDevices] = useState<Record<string, DeviceData>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
+  // Grid column definitions with custom cell renderers for formatting
   const columns: GridColDef[] = [
     { 
       field: 'id', 
@@ -117,7 +119,9 @@ const DeviceTable = () => {
     }
   ];
 
+  // MQTT connection and subscription management
   useEffect(() => {
+    // Initialize MQTT client with WebSocket connection
     const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
       keepalive: 60,
       clean: true,
@@ -125,6 +129,7 @@ const DeviceTable = () => {
       reconnectPeriod: 1000
     });
 
+    // Device topics for subscription
     const topics = [
       'device/1/battery',
       'device/2/battery',
@@ -135,14 +140,17 @@ const DeviceTable = () => {
     client.on('connect', () => {
       console.log('Connected to MQTT broker');
       setConnectionStatus('connected');
+      // Subscribe to all device topics on connection
       topics.forEach(topic => client.subscribe(topic));
       setIsLoading(false);
     });
 
+    // Handle incoming MQTT messages and update device state
     client.on('message', (topic, message) => {
       const deviceId = topic.split('/')[1];
       const data = JSON.parse(message.toString());
       
+      // Update devices state with new data while preserving existing state
       setDevices(prev => ({
         ...prev,
         [deviceId]: {
@@ -155,15 +163,13 @@ const DeviceTable = () => {
       setLastUpdate(Date.now());
     });
 
-    client.on('error', () => {
-      setConnectionStatus('error');
-    });
-
+    // Cleanup MQTT connection on component unmount
     return () => {
       client.end();
     };
   }, []);
 
+  // Update current time every second for "last updated" displays
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
@@ -198,13 +204,9 @@ const DeviceTable = () => {
   );
 
   return (
-    <Box sx={{ 
-      width: '100%',
-      p: 3,
-      backgroundColor: '#f5f5f5',
-      minHeight: '100vh'
-    }}>
+    <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2 }}>
+        {/* Status display section */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
             Device Monitor
@@ -218,6 +220,7 @@ const DeviceTable = () => {
               }
               sx={{ fontWeight: 'bold' }}
             />
+            {/* Show last update time only when connected */}
             {connectionStatus === 'connected' && (
               <Chip
                 label={`Last update: ${Math.max(0, Math.floor((currentTime - lastUpdate) / 1000))}s ago`}
@@ -234,24 +237,8 @@ const DeviceTable = () => {
           </Alert>
         )}
 
-        <Box sx={{ 
-          height: 400, 
-          width: '100%',
-          position: 'relative',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-            backgroundColor: 'white',
-            borderRadius: 1,
-            '& .MuiDataGrid-cell': {
-              borderColor: 'rgba(224, 224, 224, 0.5)'
-            },
-            '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: 'primary.light',
-              color: 'white',
-              fontWeight: 'bold'
-            }
-          }
-        }}>
+        {/* Data grid with real-time updates */}
+        <Box sx={{ height: 400, width: '100%', position: 'relative' }}>
           {isLoading && <LoadingOverlay />}
           <DataGrid
             rows={Object.values(devices)}

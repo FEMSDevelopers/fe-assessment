@@ -8,6 +8,7 @@ export const useMQTTConnection = () => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
   const [hasInitialData, setHasInitialData] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
   const handleMessage = useCallback((topic: string, message: Buffer) => {
     const deviceId = topic.split('/')[1];
@@ -32,13 +33,16 @@ export const useMQTTConnection = () => {
 
       if (hasAllDevices && !hasInitialData) {
         setHasInitialData(true);
-        setTimeout(() => setIsLoading(false), 500); // Smooth transition
+        // Only stop loading when we have both connection and data
+        if (isConnected) {
+          setTimeout(() => setIsLoading(false), 1000);
+        }
       }
 
       return newDevices;
     });
     setLastUpdate(Date.now());
-  }, [hasInitialData]);
+  }, [hasInitialData, isConnected]);
 
   useEffect(() => {
     const client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
@@ -47,6 +51,7 @@ export const useMQTTConnection = () => {
     client.on('connect', () => {
       console.log('Connected to MQTT broker');
       setConnectionStatus('connected');
+      setIsConnected(true);
       DEVICE_TOPICS.forEach(topic => client.subscribe(topic));
       
       // Set a maximum wait time for initial data
@@ -55,7 +60,7 @@ export const useMQTTConnection = () => {
           setHasInitialData(true);
           setIsLoading(false);
         }
-      }, 5000);
+      }, 7000); // Increased timeout for better UX
     });
 
     client.on('message', handleMessage);
@@ -70,12 +75,12 @@ export const useMQTTConnection = () => {
     };
   }, [handleMessage, hasInitialData]);
 
-  // Only show data when we have initial data and aren't loading
-  const showData = !isLoading && hasInitialData;
+  // Only show data when we have both connection and initial data
+  const showData = !isLoading && hasInitialData && isConnected;
 
   return {
     devices: showData ? devices : {},
-    isLoading: isLoading || !hasInitialData,
+    isLoading: isLoading || !hasInitialData || !isConnected,
     connectionStatus: isLoading ? 'connecting' : connectionStatus,
     lastUpdate
   };

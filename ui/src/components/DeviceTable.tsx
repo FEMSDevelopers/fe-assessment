@@ -20,7 +20,135 @@ interface DeviceData {
   lastUpdated?: number;
 }
 
-// Separate loading component for initial render
+// Move WelcomeOverlay component definition before it's used
+const WelcomeOverlay = ({ connectionProgress }: { connectionProgress: number }) => (
+  <Fade in={true} timeout={1000} unmountOnExit>
+    <Box sx={{ 
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(4px)',
+      zIndex: 2,
+      gap: 3
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: 2 
+      }}>
+        <Box sx={{ 
+          position: 'relative',
+          width: 80,
+          height: 80,
+          mb: 2
+        }}>
+          <CircularProgress
+            size={80}
+            thickness={2}
+            sx={{
+              position: 'absolute',
+              color: 'primary.light'
+            }}
+          />
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)'
+          }}>
+            <SensorsIcon color="primary" sx={{ fontSize: 40 }} />
+          </Box>
+        </Box>
+
+        <Typography variant="h4" color="primary" sx={{ 
+          fontWeight: 500,
+          textAlign: 'center',
+          mb: 1
+        }}>
+          Device Monitor
+        </Typography>
+        
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          Initializing IoT Dashboard
+        </Typography>
+      </Box>
+      
+      <Box sx={{ 
+        width: '300px', 
+        textAlign: 'center',
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        p: 3,
+        borderRadius: 2,
+        boxShadow: 1
+      }}>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {connectionProgress < 100 ? 'Connecting to MQTT broker...' : 'Connected!'}
+        </Typography>
+        
+        <LinearProgress 
+          variant="determinate" 
+          value={connectionProgress} 
+          sx={{ 
+            height: 6, 
+            borderRadius: 3,
+            mb: 1,
+            mt: 2,
+            backgroundColor: 'rgba(0, 0, 0, 0.05)',
+            '& .MuiLinearProgress-bar': {
+              borderRadius: 3,
+              backgroundImage: 'linear-gradient(45deg, #4CAF50 30%, #81C784 90%)',
+            }
+          }} 
+        />
+
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          mt: 1
+        }}>
+          <Typography variant="caption" color="text.secondary">
+            {connectionProgress}%
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {connectionProgress < 100 ? 'Establishing connection...' : 'Ready!'}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2, 
+        mt: 2,
+        flexWrap: 'wrap',
+        justifyContent: 'center'
+      }}>
+        {DEVICE_TOPICS.map((topic, index) => (
+          <Chip
+            key={topic}
+            label={`Device ${index + 1}`}
+            color="primary"
+            variant="outlined"
+            size="small"
+            sx={{ 
+              opacity: connectionProgress > (index + 1) * 25 ? 1 : 0.5,
+              transition: 'opacity 0.3s ease-in-out'
+            }}
+          />
+        ))}
+      </Box>
+    </Box>
+  </Fade>
+);
+
+// Initial loading component using WelcomeOverlay
 const InitialLoadingState = () => (
   <Box sx={{ 
     width: '100%', 
@@ -30,11 +158,11 @@ const InitialLoadingState = () => (
     justifyContent: 'center',
     backgroundColor: '#f5f5f5'
   }}>
-    <WelcomeOverlay />
+    <WelcomeOverlay connectionProgress={0} />
   </Box>
 );
 
-// Wrap main component with Suspense
+// Main component wrapper
 const DeviceTableWrapper = () => (
   <Suspense fallback={<InitialLoadingState />}>
     <DeviceTable />
@@ -265,140 +393,17 @@ const DeviceTable = () => {
     });
   };
 
-  const WelcomeOverlay = () => (
-    <Fade in={true} timeout={1000}>
-      <Box sx={{ 
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 2,
-        gap: 3
-      }}>
-        <Box sx={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center',
-          gap: 2 
-        }}>
-          <Box sx={{ 
-            position: 'relative',
-            width: 80,
-            height: 80,
-            mb: 2
-          }}>
-            <CircularProgress
-              size={80}
-              thickness={2}
-              sx={{
-                position: 'absolute',
-                color: 'primary.light'
-              }}
-            />
-            <Box sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)'
-            }}>
-              <SensorsIcon color="primary" sx={{ fontSize: 40 }} />
-            </Box>
-          </Box>
-
-          <Typography variant="h4" color="primary" sx={{ 
-            fontWeight: 500,
-            textAlign: 'center',
-            mb: 1
-          }}>
-            Device Monitor
-          </Typography>
-          
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Initializing IoT Dashboard
-          </Typography>
-        </Box>
-        
-        <Box sx={{ 
-          width: '300px', 
-          textAlign: 'center',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          p: 3,
-          borderRadius: 2,
-          boxShadow: 1
-        }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {connectionProgress < 100 ? 'Connecting to MQTT broker...' : 'Connected!'}
-          </Typography>
-          
-          <LinearProgress 
-            variant="determinate" 
-            value={connectionProgress} 
-            sx={{ 
-              height: 6, 
-              borderRadius: 3,
-              mb: 1,
-              mt: 2,
-              backgroundColor: 'rgba(0, 0, 0, 0.05)',
-              '& .MuiLinearProgress-bar': {
-                borderRadius: 3,
-                backgroundImage: 'linear-gradient(45deg, #4CAF50 30%, #81C784 90%)',
-              }
-            }} 
-          />
-
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            mt: 1
-          }}>
-            <Typography variant="caption" color="text.secondary">
-              {connectionProgress}%
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {connectionProgress < 100 ? 'Establishing connection...' : 'Ready!'}
-            </Typography>
-          </Box>
-        </Box>
-
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 2, 
-          mt: 2,
-          flexWrap: 'wrap',
-          justifyContent: 'center'
-        }}>
-          {DEVICE_TOPICS.map((topic, index) => (
-            <Chip
-              key={topic}
-              label={`Device ${index + 1}`}
-              color="primary"
-              variant="outlined"
-              size="small"
-              sx={{ 
-                opacity: connectionProgress > (index + 1) * 25 ? 1 : 0.5,
-                transition: 'opacity 0.3s ease-in-out'
-              }}
-            />
-          ))}
-        </Box>
-      </Box>
-    </Fade>
-  );
-
   return (
     <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
-        {/* Always show WelcomeOverlay when loading or no data */}
-        {(isLoading || Object.keys(devices).length === 0) && <WelcomeOverlay />}
-        
-        {/* Only show content when we have data */}
+        {/* Use Fade for smooth transitions */}
+        <Fade in={isLoading || Object.keys(devices).length === 0} timeout={500} unmountOnExit>
+          <Box sx={{ position: 'absolute', width: '100%', height: '100%', top: 0, left: 0 }}>
+            <WelcomeOverlay connectionProgress={connectionProgress} />
+          </Box>
+        </Fade>
+
+        {/* Content with fade in */}
         <Fade in={!isLoading && Object.keys(devices).length > 0} timeout={500}>
           <Box>
             {/* Header section with controls */}

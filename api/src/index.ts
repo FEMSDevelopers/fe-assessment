@@ -2,13 +2,15 @@
 import mqtt from "mqtt";
 import express from "express";
 import bodyParser from "body-parser";
+import cors from 'cors';
 
 const app = express();
 const port = 3000;
 
 app.use(bodyParser.json());
+app.use(cors());
 
-const brokerUrl = "mqtt://broker.emqx.io";
+const brokerUrl = "wss://broker.emqx.io:8084/mqtt";
 const topics = [
   "device/1/battery",
   "device/2/battery",
@@ -18,6 +20,26 @@ const topics = [
 
 const client = mqtt.connect(brokerUrl);
 let isPublishing = true;
+
+app.post('/api/publish/control', (req, res) => {
+  const { enabled } = req.body;
+  isPublishing = enabled;
+  res.json({ success: true, publishing: isPublishing });
+});
+
+app.post('/api/publish/:deviceId', (req, res) => {
+  const { deviceId } = req.params;
+  const data = req.body;
+  
+  const topic = `device/${deviceId}/battery`;
+  client.publish(topic, JSON.stringify(data), (err) => {
+    if (err) {
+      res.status(500).json({ error: 'Failed to publish' });
+    } else {
+      res.json({ success: true });
+    }
+  });
+});
 
 client.on("connect", () => {
   console.log("Connected to broker");

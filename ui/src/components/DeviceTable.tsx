@@ -1,6 +1,6 @@
 import { useEffect, useState, Suspense } from 'react';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
-import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress } from '@mui/material';
+import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress, keyframes } from '@mui/material';
 import mqtt from 'mqtt';
 import { PlayArrow, Pause, Refresh } from '@mui/icons-material';
 import { useMQTTConnection } from '../hooks/useMQTTConnection';
@@ -19,6 +19,18 @@ interface DeviceData {
   hum?: number;
   lastUpdated?: number;
 }
+
+// Add these keyframes
+const pulseAnimation = keyframes`
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+`;
+
+const fadeInAnimation = keyframes`
+  0% { background-color: rgba(76, 175, 80, 0.1); }
+  100% { background-color: transparent; }
+`;
 
 // Move WelcomeOverlay component definition before it's used
 const WelcomeOverlay = ({ connectionProgress }: { connectionProgress: number }) => (
@@ -246,7 +258,10 @@ const DeviceTable = () => {
             alignItems: 'center', 
             gap: 1,
             color: params.row.temp > 30 ? 'error.main' : 'success.main',
-            fontWeight: 500
+            fontWeight: 500,
+            padding: '4px 8px',
+            borderRadius: 1,
+            animation: `${fadeInAnimation} 1s ease-out`
           }}
           data-testid={`temp-cell-${params.row.id}`}
         >
@@ -302,57 +317,7 @@ const DeviceTable = () => {
     }
   ];
 
-  // MQTT connection and subscription management
-  useEffect(() => {
-    // Initialize MQTT client with WebSocket connection
-    const client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
-      keepalive: 60,
-      clean: true,
-      connectTimeout: 30 * 1000,
-      reconnectPeriod: 1000
-    });
-
-    // Device topics for subscription
-    const topics = [
-      'device/1/battery',
-      'device/2/battery',
-      'device/3/battery',
-      'device/4/battery'
-    ];
-
-    client.on('connect', () => {
-      console.log('Connected to MQTT broker');
-      setConnectionStatus('connected');
-      // Subscribe to all device topics on connection
-      topics.forEach(topic => client.subscribe(topic));
-      setIsLoading(false);
-    });
-
-    // Handle incoming MQTT messages and update device state
-    client.on('message', (topic, message) => {
-      const deviceId = topic.split('/')[1];
-      const data = JSON.parse(message.toString());
-      
-      // Update devices state with new data while preserving existing state
-      setDevices(prev => ({
-        ...prev,
-        [deviceId]: {
-          id: deviceId,
-          name: `Device ${deviceId}`,
-          ...data,
-          lastUpdated: Date.now()
-        }
-      }));
-      setLastUpdate(Date.now());
-    });
-
-    // Cleanup MQTT connection on component unmount
-    return () => {
-      client.end();
-    };
-  }, []);
-
-  // Update current time every second for "last updated" displays
+  // Keep these effects
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(Date.now());
@@ -361,7 +326,6 @@ const DeviceTable = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Simulated connection progress
   useEffect(() => {
     if (isLoading && connectionStatus === 'connecting') {
       const interval = setInterval(() => {
@@ -375,7 +339,6 @@ const DeviceTable = () => {
     }
   }, [isLoading, connectionStatus]);
 
-  // Reset progress when connection is established
   useEffect(() => {
     if (connectionStatus === 'connected') {
       setConnectionProgress(100);
@@ -393,6 +356,25 @@ const DeviceTable = () => {
     });
   };
 
+  const LiveIndicator = () => (
+    <Box sx={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 1,
+      animation: `${pulseAnimation} 2s infinite`
+    }}>
+      <Box sx={{ 
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        backgroundColor: 'success.main'
+      }} />
+      <Typography variant="caption" color="success.main" sx={{ fontWeight: 'bold' }}>
+        Live Data
+      </Typography>
+    </Box>
+  );
+
   return (
     <Box sx={{ width: '100%', p: 3, backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
       <Paper elevation={3} sx={{ p: 3, borderRadius: 2, position: 'relative' }}>
@@ -409,9 +391,12 @@ const DeviceTable = () => {
             {/* Header section with controls */}
             <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box>
-                <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 500 }}>
-                  Device Monitor
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                  <Typography variant="h4" color="primary" sx={{ fontWeight: 500 }}>
+                    Device Monitor
+                  </Typography>
+                  {!isLoading && !isPaused && <LiveIndicator />}
+                </Box>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   <Chip
                     label={`Status: ${connectionStatus}`}
@@ -500,7 +485,8 @@ const DeviceTable = () => {
                   },
                   '&:hover': {
                     backgroundColor: 'rgba(0, 0, 0, 0.04)'
-                  }
+                  },
+                  transition: 'background-color 0.3s ease'
                 },
                 '& .MuiDataGrid-columnHeader': {
                   padding: '0 16px'
@@ -516,11 +502,16 @@ const DeviceTable = () => {
                 loading={Object.keys(devices).length === 0}
                 sx={{
                   '& .MuiDataGrid-cell': {
-                    animation: 'fadeIn 0.5s'
+                    animation: `${fadeInAnimation} 1s ease-out`,
                   },
-                  '@keyframes fadeIn': {
-                    '0%': { opacity: 0.5 },
-                    '100%': { opacity: 1 }
+                  '& .MuiDataGrid-row': {
+                    '&:nth-of-type(even)': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.02)'
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    },
+                    transition: 'background-color 0.3s ease'
                   },
                   '@keyframes pulse': {
                     '0%': { opacity: 1 },

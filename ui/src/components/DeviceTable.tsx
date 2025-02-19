@@ -386,18 +386,55 @@ const getTrendIcon = (current: number, previous: number | undefined) => {
   return <TrendingFlatIcon className="trend-flat" />;
 };
 
-const DEVICE_TIMEOUT = 5000; // Consider device inactive after 5 seconds
+const DEVICE_TIMEOUT = 5000;
 
 const DeviceTable: React.FC = () => {
   const { devices, isLoading, connectionStatus, lastUpdate, isPaused, togglePause } = useMQTTConnection();
   const [connectionProgress, setConnectionProgress] = useState(0);
 
   const getDeviceStatus = useCallback((deviceTime?: number) => {
+    // First check global status
+    if (connectionStatus === 'error') return 'disconnected';
     if (isPaused) return 'paused';
+    
+    // Then check device status
     if (!deviceTime) return 'inactive';
     const timeSinceUpdate = Date.now() - deviceTime;
     return timeSinceUpdate < DEVICE_TIMEOUT ? 'active' : 'inactive';
-  }, [isPaused]);
+  }, [isPaused, connectionStatus]);
+
+  const getStatusColor = useCallback((status: string) => {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'paused':
+        return 'warning';
+      case 'disconnected':
+        return 'error';
+      default:
+        return 'default';
+    }
+  }, []);
+
+  // Get overall connection status
+  const getConnectionStatus = useCallback(() => {
+    if (isPaused) return 'paused';
+    return connectionStatus;
+  }, [connectionStatus, isPaused]);
+
+  // Get connection status chip color
+  const getConnectionChipColor = useCallback((status: string) => {
+    switch (status) {
+      case 'connected':
+        return 'success';
+      case 'paused':
+        return 'warning';
+      case 'error':
+        return 'error';
+      default:
+        return 'default';
+    }
+  }, []);
 
   // Define base columns
   const columns: GridColDef[] = [
@@ -467,15 +504,16 @@ const DeviceTable: React.FC = () => {
         return (
           <Chip
             label={status}
-            color={
-              status === 'active' ? 'success' :
-              status === 'paused' ? 'warning' :
-              'default'
-            }
+            color={getStatusColor(status)}
             size="small"
+            sx={{
+              transition: 'all 0.3s ease-in-out',
+              minWidth: 85,
+              justifyContent: 'center'
+            }}
           />
         );
-      }
+      },
     }
   ];
 
@@ -540,14 +578,16 @@ const DeviceTable: React.FC = () => {
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Chip
-            label={`Status: ${connectionStatus}`}
-            color={connectionStatus === 'connected' ? 'success' : 'error'}
+            label={`Status: ${getConnectionStatus()}`}
+            color={getConnectionChipColor(getConnectionStatus())}
+            sx={{ transition: 'all 0.3s ease-in-out' }}
           />
           <Chip
             label={isPaused ? 'Resume' : 'Pause'}
             onClick={() => togglePause(!isPaused)}
             color={isPaused ? 'warning' : 'primary'}
             clickable
+            sx={{ transition: 'all 0.3s ease-in-out' }}
           />
         </Box>
       </Box>

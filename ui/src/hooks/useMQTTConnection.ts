@@ -21,23 +21,31 @@ export const useMQTTConnection = () => {
       const deviceId = topic.split('/')[1];
       const data = JSON.parse(message.toString()) as MQTTMessage;
       const currentTime = Date.now();
-      
-      // Collect updates
+
+      // Collect the update
       pendingUpdatesRef.current[deviceId] = {
         id: deviceId,
         name: `Device ${deviceId}`,
-        prevTemp: devices[deviceId]?.temp,
-        prevHum: devices[deviceId]?.hum,
-        ...data,
+        temp: data.temp,
+        hum: data.hum,
         time: data.time || currentTime
       };
 
-      // Only update if enough time has passed (1.9s to account for network delay)
+      // Only update if enough time has passed
       if (currentTime - lastUpdateTimeRef.current >= 1900) {
-        setDevices(prev => ({
-          ...prev,
-          ...pendingUpdatesRef.current
-        }));
+        setDevices(prev => {
+          const updates = Object.entries(pendingUpdatesRef.current).reduce((acc, [id, device]) => ({
+            ...acc,
+            [id]: {
+              ...device,
+              prevTemp: prev[id]?.temp || 0,
+              prevHum: prev[id]?.hum || 0,
+            }
+          }), {});
+
+          return { ...prev, ...updates };
+        });
+        
         setLastUpdate(currentTime);
         lastUpdateTimeRef.current = currentTime;
         pendingUpdatesRef.current = {};
@@ -46,7 +54,7 @@ export const useMQTTConnection = () => {
     } catch (error) {
       console.error('Error handling MQTT message:', error);
     }
-  }, [isPaused, devices]);
+  }, [isPaused]);
 
   useEffect(() => {
     if (clientRef.current) {

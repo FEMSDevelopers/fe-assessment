@@ -3,6 +3,10 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { Box, CircularProgress, Chip, Alert, Paper, Typography, IconButton, LinearProgress } from '@mui/material';
 import mqtt from 'mqtt';
 import { PlayArrow, Pause, Refresh } from '@mui/icons-material';
+import { useMQTTConnection } from '../hooks/useMQTTConnection';
+import { deviceApi } from '../api/deviceApi';
+import { GridContainer, DashboardContainer } from './styled';
+import { getDeviceColumns } from './DeviceGridColumns';
 
 interface DeviceData {
   id: string;
@@ -14,13 +18,9 @@ interface DeviceData {
 }
 
 const DeviceTable = () => {
-  // State for device data using Record type for O(1) lookups by deviceId
-  const [devices, setDevices] = useState<Record<string, DeviceData>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
-  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
-  const [currentTime, setCurrentTime] = useState<number>(Date.now());
+  const { devices, isLoading, connectionStatus, lastUpdate } = useMQTTConnection();
   const [isPaused, setIsPaused] = useState(false);
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
   const [connectionProgress, setConnectionProgress] = useState(0);
 
   // Grid column definitions with custom cell renderers for formatting

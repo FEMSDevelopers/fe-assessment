@@ -17,6 +17,7 @@ const DeviceTable = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const [currentTime, setCurrentTime] = useState<number>(Date.now());
 
   const columns: GridColDef[] = [
     { field: 'id', headerName: 'ID', width: 90 },
@@ -119,6 +120,14 @@ const DeviceTable = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <Box sx={{ width: '100%' }}>
       <Box sx={{ mb: 2, display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -131,7 +140,7 @@ const DeviceTable = () => {
         />
         {connectionStatus === 'connected' && (
           <Chip
-            label={`Last update: ${((Date.now() - lastUpdate) / 1000).toFixed(1)}s ago`}
+            label={`Last update: ${((currentTime - lastUpdate) / 1000).toFixed(0)}s ago`}
             color="info"
           />
         )}

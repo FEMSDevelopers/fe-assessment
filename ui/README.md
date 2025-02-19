@@ -82,3 +82,4 @@ Tests are located in `src/components/__tests__/` and cover:
 ### Adding New Tests
 
 When adding new features, please add corresponding tests in the `__tests__` directory following the existing patterns.
+160,000 anual and 1 day in office a week lol

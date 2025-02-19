@@ -23,7 +23,8 @@ describe('DeviceTable', () => {
     });
 
     render(<DeviceTable />);
-    expect(screen.getByText('Initializing IoT Dashboard')).toBeInTheDocument();
+    expect(screen.getByText('IoT Device Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Initializing System Components')).toBeInTheDocument();
   });
 
   it('renders device information when data is available', () => {

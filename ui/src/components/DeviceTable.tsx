@@ -47,6 +47,7 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
   boxShadow: theme.shadows[2],
   '& .MuiDataGrid-cell': {
     borderColor: theme.palette.grey[200],
+    transition: 'all 0.3s ease-in-out',
   },
   '& .MuiDataGrid-columnHeader': {
     backgroundColor: theme.palette.grey[50],
@@ -60,6 +61,10 @@ const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
   },
   '& .trend-flat': {
     color: theme.palette.grey[500],
+  },
+  '& .value-change': {
+    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    transition: 'background-color 0.3s ease-in-out',
   }
 }));
 
@@ -542,6 +547,12 @@ const DeviceTable = () => {
         autoHeight
         disableRowSelectionOnClick
         getRowId={(row) => row.id}
+        getCellClassName={(params) => {
+          if (params.field === 'temp' || params.field === 'hum') {
+            return 'value-change';
+          }
+          return '';
+        }}
         initialState={{
           pagination: { paginationModel: { pageSize: 10 } },
         }}

@@ -1,0 +1,18 @@
+{
+  "name": "fe-assessment",
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "test:ui": "cd ui && npm test",
+    "test:api": "cd api && npm test",
+    "start": "concurrently \"cd api && npm start\" \"cd ui && npm run dev\" \"cd api && npm run publisher\"",
+    "dev": "npm run start",
+    "install:all": "npm install && npm install --workspaces"
+  },
+  "workspaces": [
+    "ui",
+    "api"
+  ],
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 

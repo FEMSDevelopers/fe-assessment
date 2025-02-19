@@ -21,5 +21,6 @@ export const MQTT_CONFIG = {
 export const DEVICE_TOPICS = [
   'device/1/battery',
   'device/2/battery',
-  'device/3/battery'
+  'device/3/battery',
+  'device/4/battery'
 ]; 

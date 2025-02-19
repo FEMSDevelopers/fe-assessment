@@ -14,11 +14,12 @@ const client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
 
 client.on('connect', () => {
   console.log('Publisher connected to MQTT broker');
+  console.log('Publishing to topics:', DEVICE_TOPICS);
   
   setInterval(() => {
     DEVICE_TOPICS.forEach(topic => {
       const data = generateRandomData();
-      console.log('Publishing to topic:', topic, 'data:', data);
+      console.log(`Publishing to ${topic}:`, data);
       client.publish(topic, JSON.stringify(data), (err) => {
         if (err) {
           console.error('Error publishing to', topic, err);

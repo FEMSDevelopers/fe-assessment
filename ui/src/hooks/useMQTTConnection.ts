@@ -11,6 +11,8 @@ export const useMQTTConnection = () => {
   
   // Use ref to maintain client instance
   const clientRef = useRef<MqttClient | null>(null);
+  const pendingUpdatesRef = useRef<Record<string, DeviceData>>({});
+  const lastUpdateTimeRef = useRef<number>(0);
 
   const handleMessage = useCallback((topic: string, message: Buffer) => {
     if (isPaused) return;
@@ -18,29 +20,33 @@ export const useMQTTConnection = () => {
     try {
       const deviceId = topic.split('/')[1];
       const data = JSON.parse(message.toString()) as MQTTMessage;
+      const currentTime = Date.now();
       
-      console.log('Received MQTT message:', { topic, deviceId, data });
+      // Collect updates
+      pendingUpdatesRef.current[deviceId] = {
+        id: deviceId,
+        name: `Device ${deviceId}`,
+        prevTemp: devices[deviceId]?.temp,
+        prevHum: devices[deviceId]?.hum,
+        ...data,
+        time: data.time || currentTime
+      };
 
-      setDevices(prev => {
-        const currentDevice = prev[deviceId];
-        return {
+      // Only update if enough time has passed (1.9s to account for network delay)
+      if (currentTime - lastUpdateTimeRef.current >= 1900) {
+        setDevices(prev => ({
           ...prev,
-          [deviceId]: {
-            id: deviceId,
-            name: `Device ${deviceId}`,
-            prevTemp: currentDevice?.temp,
-            prevHum: currentDevice?.hum,
-            ...data,
-            time: data.time || Date.now()
-          }
-        };
-      });
+          ...pendingUpdatesRef.current
+        }));
+        setLastUpdate(currentTime);
+        lastUpdateTimeRef.current = currentTime;
+        pendingUpdatesRef.current = {};
+      }
 
-      setLastUpdate(Date.now());
     } catch (error) {
       console.error('Error handling MQTT message:', error);
     }
-  }, [isPaused]);
+  }, [isPaused, devices]);
 
   useEffect(() => {
     if (clientRef.current) {

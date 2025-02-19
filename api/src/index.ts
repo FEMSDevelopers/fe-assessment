@@ -48,20 +48,13 @@ client.on("connect", () => {
     if (isPublishing) {
       topics.forEach((topic) => {
         const batteryData = {
-          level: parseFloat((Math.random() * 100).toFixed(2)),
-          voltage: parseFloat((Math.random() * 4).toFixed(2)),
-          status: "discharging",
-          health: "good",
-          temperature: parseFloat((Math.random() * 40).toFixed(2)),
-          cycles: Math.floor(Math.random() * 200),
-          capacity: 2500,
-          runtime_remaining: `${Math.floor(Math.random() * 5)}h ${Math.floor(
-            Math.random() * 60
-          )}m`,
-          low_warning: Math.random() < 0.1,
+          time: Date.now(),
+          temp: parseFloat((Math.random() * 40).toFixed(2)),
+          hum: parseFloat((Math.random() * 50 + 30).toFixed(2)),
         };
+        
         client.publish(topic, JSON.stringify(batteryData), () => {
-          console.log(`Published ${JSON.stringify(batteryData)} to ${topic}`);
+          console.log(`Published to ${topic}:`, batteryData);
         });
       });
     }

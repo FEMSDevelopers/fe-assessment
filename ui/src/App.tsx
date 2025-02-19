@@ -1,12 +1,15 @@
-import React from "react";
-import mqtt from "mqtt";
+import { Container, Typography } from '@mui/material';
+import DeviceTable from './components/DeviceTable';
 
-const App: React.FC = () => {
+function App() {
   return (
-    <div>
-      <h1>MQTT Messages</h1>
-    </div>
+    <Container maxWidth="xl">
+      <Typography variant="h4" component="h1" gutterBottom sx={{ mt: 4 }}>
+        MQTT Device Monitor
+      </Typography>
+      <DeviceTable />
+    </Container>
   );
-};
+}
 
 export default App;

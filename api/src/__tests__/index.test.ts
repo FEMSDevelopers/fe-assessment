@@ -4,32 +4,28 @@ import express from 'express';
 import mqtt from 'mqtt';
 import { createServer } from '../index';
 
-// Mock MQTT
+// Create a single mock MQTT client that we'll reuse
+const mockMqttClient = {
+  on: vi.fn(),
+  publish: vi.fn((topic, message, callback) => callback()),
+  end: vi.fn(),
+};
+
+// Mock MQTT with consistent implementation
 vi.mock('mqtt', () => ({
   default: {
-    connect: vi.fn().mockReturnValue({
-      on: vi.fn(),
-      publish: vi.fn()
-    })
+    connect: vi.fn(() => mockMqttClient)
   }
 }));
 
 describe('MQTT API Server', () => {
   let app: express.Application;
-  let mockMqttClient: any;
 
   beforeEach(() => {
-    mockMqttClient = {
-      on: vi.fn(),
-      publish: vi.fn((topic, message, callback) => callback()),
-      end: vi.fn(),
-    };
-    (mqtt.connect as any).mockReturnValue(mockMqttClient);
-    app = createServer();
-  });
-
-  afterEach(() => {
+    // Reset all mocks before each test
     vi.clearAllMocks();
+    // Create new server instance
+    app = createServer();
   });
 
   describe('POST /api/publish/control', () => {
@@ -81,13 +77,13 @@ describe('MQTT API Server', () => {
     });
 
     it('handles publish error', async () => {
-      const deviceId = '1';
+      // Temporarily override publish implementation for this test
       mockMqttClient.publish.mockImplementationOnce((topic, message, callback) => {
         callback(new Error('Publish failed'));
       });
 
       const response = await request(app)
-        .post(`/api/publish/${deviceId}`)
+        .post(`/api/publish/1`)
         .send({
           time: Date.now(),
           temp: 25.5,

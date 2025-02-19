@@ -2,16 +2,17 @@
 import express, { Application } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import { MQTTService } from './services/mqtt.service';
+import mqttService from './services/mqtt.service';
 import { MQTTController } from './controllers/mqtt.controller';
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { DeviceData } from './types';
 
 export function createServer(): Application {
   const app = express();
   app.use(bodyParser.json());
   app.use(cors());
 
-  const mqttService = new MQTTService();
+  // Create controller instance with the mqtt service
   const mqttController = new MQTTController(mqttService);
 
   // Routes

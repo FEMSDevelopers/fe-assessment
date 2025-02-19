@@ -4,12 +4,21 @@ import { DeviceData, MQTT_CONFIG, DEVICE_TOPICS } from '../types';
 
 export class MQTTService {
   private client: MqttClient;
-  private isPublishing: boolean = true;
-  private publishInterval: NodeJS.Timer | null = null;
+  private publishInterval: NodeJS.Timeout | null = null;
+  private isPublishing: boolean = false;
 
   constructor() {
-    this.client = mqtt.connect(MQTT_CONFIG.url, MQTT_CONFIG.options);
-    this.setupPublishing();
+    this.client = mqtt.connect('wss://broker.emqx.io:8084/mqtt', {
+      clean: true,
+      connectTimeout: 30000,
+      keepalive: 60,
+      reconnectPeriod: 1000
+    });
+
+    this.client.on('connect', () => {
+      console.log('Connected to MQTT broker');
+      this.startPublishing();
+    });
   }
 
   private generateDeviceData(): DeviceData {
@@ -20,31 +29,39 @@ export class MQTTService {
     };
   }
 
-  private setupPublishing(): void {
-    this.client.on('connect', () => {
-      console.log('Connected to MQTT broker');
-      this.startPublishing();
-    });
-  }
-
-  private startPublishing(): void {
-    if (this.publishInterval) {
-      clearInterval(this.publishInterval);
+  public startPublishing(): void {
+    if (this.isPublishing) {
+      return;
     }
 
+    this.isPublishing = true;
+
+    // Clear any existing interval
+    if (this.publishInterval) {
+      clearInterval(this.publishInterval);
+      this.publishInterval = null;
+    }
+
+    // Set up new interval
     this.publishInterval = setInterval(() => {
-      if (this.isPublishing) {
-        DEVICE_TOPICS.forEach(topic => {
-          const data = this.generateDeviceData();
-          this.publishToTopic(topic, data);
-        });
-      }
+      DEVICE_TOPICS.forEach((topic: string) => {
+        const data = this.generateDeviceData();
+        this.publish(topic, data);
+      });
     }, 5000);
   }
 
-  public async publishToTopic(topic: string, data: DeviceData): Promise<void> {
+  public stopPublishing(): void {
+    this.isPublishing = false;
+    if (this.publishInterval) {
+      clearInterval(this.publishInterval);
+      this.publishInterval = null;
+    }
+  }
+
+  public publish(topic: string, data: DeviceData): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.client.publish(topic, JSON.stringify(data), (error) => {
+      this.client.publish(topic, JSON.stringify(data), (error?: Error) => {
         if (error) {
           reject(error);
         } else {
@@ -54,15 +71,16 @@ export class MQTTService {
     });
   }
 
-  public setPublishing(enabled: boolean): boolean {
-    this.isPublishing = enabled;
+  public getPublishingStatus(): boolean {
     return this.isPublishing;
   }
 
   public cleanup(): void {
-    if (this.publishInterval) {
-      clearInterval(this.publishInterval);
-    }
+    // Stop publishing
+    this.stopPublishing();
+    // Close MQTT connection
     this.client.end();
   }
-} 
+}
+
+export default new MQTTService(); 

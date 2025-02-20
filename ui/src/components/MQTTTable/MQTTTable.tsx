@@ -5,12 +5,8 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } 
 import { publishData, unsubscribeFromTopic } from "../../client";
 
 const reducer = (state:any[], action:any) => {
-    console.log("WHAT IS SSTATE", state)
-    console.log("WHAT IS ACTION", action)
     switch (action.type) {
         case "DELETE":
-        console.log("WHAT IS ACTION", action)
-
             return [...state.filter(({label}) => label !== action.payload)];
         case "SET_NEW_PAIR":
             if(!state.some((pair) => pair.label === action.payload.label)) {
@@ -37,8 +33,7 @@ const MQTTTable = () => {
   const [label, setLabel] = React.useState("");
   const [value, setValue] = React.useState("");
   const [selectedTopic, setSelectedTopic] = React.useState("");
-//   const [inputValue, setInputValue] = React.useState("");
-    const [inputValues, setInputValue] = useReducer(reducer, []);
+  const [inputValues, setInputValue] = useReducer(reducer, []);
 
   const handlePublish = () => {
     publishData(selectedTopic, inputValues);

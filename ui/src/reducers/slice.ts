@@ -11,7 +11,7 @@ const mqttSlice = createSlice({
   reducers: {
     messageReceived: (state, action) => {
       const { topic, data } = action.payload;
-      // @ts-ignore untl i set up types
+      //@ts-ignore
       state.topics[topic] = {
         id: topic.split("/")[1], // Extract device ID
         name: `Device ${topic.split("/")[1]}`, // Generate a name
@@ -19,13 +19,13 @@ const mqttSlice = createSlice({
       };
     },
     unsubscribeTopic: (state, action) => {
-      // @ts-ignore fix this when done
+      // @ts-ignore
       delete state.topics[action.payload];
-      // @ts-ignore fix this when done
+      // @ts-ignore
       state.subscribed[action.payload] = false;
     },
     subscribeTopic: (state, action) => {
-      // @ts-ignore fix this when done
+      // @ts-ignore
       state.subscribed[action.payload] = true;
     },
   },

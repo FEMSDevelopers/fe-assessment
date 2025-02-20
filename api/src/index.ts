@@ -46,6 +46,16 @@ client.on("connect", () => {
   }, 5000);
 });
 
+app.post("/topic/:deviceId/publish", (req, res) => {
+  const { deviceId } = req.params;
+  const topic = `device/${deviceId}/battery`;
+  const message = req.body;
+  client.publish(topic, JSON.stringify(message), () => {
+    console.log(`Published ${JSON.stringify(message)} to ${topic}`);
+    res.send({ message: "Message published" });
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });

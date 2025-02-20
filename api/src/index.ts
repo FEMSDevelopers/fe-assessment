@@ -2,9 +2,20 @@
 import mqtt from "mqtt";
 import express from "express";
 import bodyParser from "body-parser";
+import cors from "cors";
 
 const app = express();
 const port = 3000;
+
+
+
+const corsOptions = {
+  origin: 'http://localhost:5173', // Allow requests from this origin
+  methods: 'GET,POST,PUT,DELETE', // Allow these HTTP methods
+  allowedHeaders: 'Content-Type,Authorization' // Allow these headers
+};
+
+app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 
@@ -15,6 +26,7 @@ const topics = [
   "device/3/battery",
   "device/4/battery",
 ];
+
 
 const client = mqtt.connect(brokerUrl);
 let isPublishing = true;

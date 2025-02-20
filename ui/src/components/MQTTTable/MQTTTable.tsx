@@ -1,31 +1,61 @@
-import React from "react";
+import React, {useReducer} from "react";
 import { useSelector } from "react-redux";
 import { DataGrid } from "@mui/x-data-grid";
 import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from "@mui/material";
 import { publishData, unsubscribeFromTopic } from "../../client";
 
+const reducer = (state:any[], action:any) => {
+    console.log("WHAT IS SSTATE", state)
+    console.log("WHAT IS ACTION", action)
+    switch (action.type) {
+        case "DELETE":
+        console.log("WHAT IS ACTION", action)
+
+            return [...state.filter(({label}) => label !== action.payload)];
+        case "SET_NEW_PAIR":
+            if(!state.some((pair) => pair.label === action.payload.label)) {
+                return [...state, { label: action.payload.label, value: action.payload.value }];
+            }
+            return state.map((pair) => {
+                if(pair.label === action.payload.label) {
+                    return { label: action.payload.label, value: action.payload.value };
+                }
+                return pair;
+            });
+        case "RESET":
+            return [];
+        default:
+            return state;
+    }
+
+};
+
+
 const MQTTTable = () => {
   const { topics } = useSelector((state:any) => state.mqtt);
   const [open, setOpen] = React.useState(false);
+  const [label, setLabel] = React.useState("");
+  const [value, setValue] = React.useState("");
   const [selectedTopic, setSelectedTopic] = React.useState("");
-  const [inputValue, setInputValue] = React.useState("");
+//   const [inputValue, setInputValue] = React.useState("");
+    const [inputValues, setInputValue] = useReducer(reducer, []);
 
   const handlePublish = () => {
-    publishData(selectedTopic, { value: inputValue });
+    publishData(selectedTopic, inputValues);
     setOpen(false);
   };
 
   const emptyArray:any[] = [];
 
   const columns = [
-    { field: "id", headerName: "ID", width: 100 },
-    { field: "name", headerName: "Device Name", width: 150 },
+    { field: "id", headerName: "ID", width: 10 },
+    { field: "name", headerName: "Device Name", width: 100 },
     ...Object.keys(topics)
       .flatMap((topic) => Object.keys(topics[topic].values))
       .map((prop) => ({
         field: prop,
         headerName: prop.charAt(0).toUpperCase() + prop.slice(1),
-        width: 120,
+        width: 90,
       })).reduce((acc, curr) => {
         if (!acc.some((col) => col.field === curr.field)) {
           acc.push(curr);
@@ -73,17 +103,42 @@ const MQTTTable = () => {
 
   return (
     <>
-      <DataGrid rows={rows} columns={columns} autoHeight />
+      <DataGrid rows={rows} columns={columns} sx={{display:'grid'}} />
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Publish Data</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            label="Value"
-            fullWidth
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-          />
+            {inputValues.map(({value, label}, index) => (
+                <div key={index}>
+                    {label}: {value} <Button onClick={() => setInputValue({ type: "DELETE", payload: label})}>remove</Button>
+                </div>
+            ))}
+
+            <div>
+                <TextField
+                    value={label}
+                    margin="normal"
+                    onChange={(value) => setLabel(value.target.value)}
+                    label="Label"
+                />: 
+                <TextField
+                    value={value}
+                    onChange={(value) => setValue(value.target.value)}
+                    label="Value"
+                    margin="normal"
+                />
+                <br />
+                <Button
+                    onClick={() => setInputValue({ type: "SET_NEW_PAIR", payload: { label, value} })}
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: "10px" }}
+                >
+                    Add Value
+                </Button> 
+                <Button onClick={() => setInputValue({ type: "RESET" })} variant="contained" color="secondary" style={{ marginTop: "10px", marginLeft: "10px" }}>
+                    Reset
+                </Button>
+            </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>

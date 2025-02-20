@@ -7,7 +7,7 @@ import { Container, Typography } from "@mui/material";
 const App = () => {
   return (
     <Provider store={store}>
-      <Container>
+      <Container maxWidth="xl">
         <Typography variant="h4" sx={{ my: 2 }}>
           MQTT Messages
         </Typography>

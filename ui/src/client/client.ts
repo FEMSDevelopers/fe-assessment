@@ -2,6 +2,8 @@ import mqtt from "mqtt";
 import store from "../store";
 import { messageReceived } from "../reducers/slice";
 
+const API = "http://localhost:3000";
+
 const MQTT_BROKER = "ws://broker.emqx.io:8083/mqtt";
 const client = mqtt.connect(MQTT_BROKER);
 
@@ -26,7 +28,15 @@ client.on("message", (topic, message) => {
 });
 
 export const publishData = (topic:string, payload:any) => {
-  client.publish(topic, JSON.stringify(payload));
+  const body = payload.reduce((acc:any, curr:any) => ({ ...acc, [curr.label.toLowerCase()]: curr.value }), {});
+  const [_,deviceId] = topic.split("/")
+  fetch(`${API}/topic/${deviceId}/publish`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 };
 
 export const unsubscribeFromTopic = (topic:string) => {

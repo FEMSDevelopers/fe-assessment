@@ -49,6 +49,8 @@ The data should:
 
 Add a column for each device to publish a value to the topic based on user input. When the icon in this column is clicked, it should open a dialog for the user to enter values. This should connect to an endpoint in the API you'll create to handle the publishing.
 
+Any values? 
+
 ### Customization
 
 You can overwrite any DOM or CSS in the package. There is an existing function in the API to generate random values for these devices.

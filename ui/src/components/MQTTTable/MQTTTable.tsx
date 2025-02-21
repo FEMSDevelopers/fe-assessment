@@ -27,7 +27,7 @@ const reducer = (state:any[], action:any) => {
 };
 
 
-const MQTTTable = () => {
+const MQTTTable = ({isTestEnvironment=false}:{isTestEnvironment?:boolean}) => {
   const { topics } = useSelector((state:any) => state.mqtt);
   const [open, setOpen] = React.useState(false);
   const [label, setLabel] = React.useState("");
@@ -98,7 +98,14 @@ const MQTTTable = () => {
 
   return (
     <>
-      <DataGrid rows={rows} columns={columns} sx={{display:'grid'}} />
+      <DataGrid 
+        rows={rows} 
+        columns={columns} 
+        sx={{display:'grid'}} 
+        disableVirtualization={isTestEnvironment ? true : undefined}
+        onProcessRowUpdateError={isTestEnvironment ? () => {} : undefined}
+
+        />
       <Dialog open={open} onClose={() => setOpen(false)}>
         <DialogTitle>Publish Data</DialogTitle>
         <DialogContent>
@@ -114,12 +121,14 @@ const MQTTTable = () => {
                     margin="normal"
                     onChange={(value) => setLabel(value.target.value)}
                     label="Label"
+                    data-testid="label-input"
                 />: 
                 <TextField
                     value={value}
                     onChange={(value) => setValue(value.target.value)}
                     label="Value"
                     margin="normal"
+                    data-testid="value-input"
                 />
                 <br />
                 <Button
@@ -130,14 +139,19 @@ const MQTTTable = () => {
                 >
                     Add Value
                 </Button> 
-                <Button onClick={() => setInputValue({ type: "RESET" })} variant="contained" color="secondary" style={{ marginTop: "10px", marginLeft: "10px" }}>
+                <Button onClick={() => setInputValue({ type: "RESET" })}
+                 variant="contained" 
+                color="secondary" style={{ marginTop: "10px", marginLeft: "10px" }}>
                     Reset
                 </Button>
             </div>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handlePublish} variant="contained">
+          <Button onClick={handlePublish} 
+            variant="contained"
+            data-testid="publish-button"
+          >
             Publish
           </Button>
         </DialogActions>

@@ -8,7 +8,6 @@ const MQTT_BROKER = "ws://broker.emqx.io:8083/mqtt";
 const client = mqtt.connect(MQTT_BROKER);
 
 client.on("connect", () => {
-  console.log("Connected to MQTT Broker");
   ["device/1/battery", "device/2/battery", "device/3/battery", "device/4/battery"].forEach((topic) => {
     client.subscribe(topic, (err) => {
       if (!err) {

@@ -1,11 +1,18 @@
-import React from "react";
-import mqtt from "mqtt";
+import { Provider } from "react-redux";
+import store from "./store";
+import {MQTTTable} from "./components/MQTTTable";
+import { Container, Typography } from "@mui/material";
 
-const App: React.FC = () => {
+const App = () => {
   return (
-    <div>
-      <h1>MQTT Messages</h1>
-    </div>
+    <Provider store={store}>
+      <Container maxWidth="xl">
+        <Typography variant="h4" sx={{ my: 2 }}>
+          MQTT Messages
+        </Typography>
+        <MQTTTable />
+      </Container>
+    </Provider>
   );
 };
 

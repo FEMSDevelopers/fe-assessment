@@ -5,13 +5,17 @@
   "main": "index.js",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "publisher": "ts-node src/mqtt/index.ts",
+    "test": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/cors": "^2.8.17",
     "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
     "express": "^4.21.2",
     "mqtt": "^5.10.3"
   },
@@ -20,6 +24,8 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "supertest": "^6.3.3",
+    "vitest": "^0.34.6"
   }
 }

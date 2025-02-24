@@ -1,51 +1,49 @@
 // filepath: /Users/mpfrac/Projects/fe-assessment/backend/src/index.ts
-import mqtt from "mqtt";
-import express from "express";
-import bodyParser from "body-parser";
+import express, { Application } from 'express';
+import bodyParser from 'body-parser';
+import cors from 'cors';
+import mqttService from './services/mqtt.service';
+import { MQTTController } from './controllers/mqtt.controller';
+import { errorHandler, notFoundHandler } from './middleware/error.middleware';
+import { DeviceData } from './types';
 
-const app = express();
-const port = 3000;
+export function createServer(): Application {
+  const app = express();
+  app.use(bodyParser.json());
+  app.use(cors());
 
-app.use(bodyParser.json());
+  // Create controller instance with the mqtt service
+  const mqttController = new MQTTController(mqttService);
 
-const brokerUrl = "mqtt://broker.emqx.io";
-const topics = [
-  "device/1/battery",
-  "device/2/battery",
-  "device/3/battery",
-  "device/4/battery",
-];
+  // Routes
+  app.post(
+    '/api/publish/control', 
+    (req, res) => mqttController.handlePublishControl(req, res)
+  );
 
-const client = mqtt.connect(brokerUrl);
-let isPublishing = true;
+  app.post(
+    '/api/publish/:deviceId', 
+    (req, res) => mqttController.handleDevicePublish(req, res)
+  );
 
-client.on("connect", () => {
-  console.log("Connected to broker");
+  // Error handling
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
-  setInterval(() => {
-    if (isPublishing) {
-      topics.forEach((topic) => {
-        const batteryData = {
-          level: parseFloat((Math.random() * 100).toFixed(2)),
-          voltage: parseFloat((Math.random() * 4).toFixed(2)),
-          status: "discharging",
-          health: "good",
-          temperature: parseFloat((Math.random() * 40).toFixed(2)),
-          cycles: Math.floor(Math.random() * 200),
-          capacity: 2500,
-          runtime_remaining: `${Math.floor(Math.random() * 5)}h ${Math.floor(
-            Math.random() * 60
-          )}m`,
-          low_warning: Math.random() < 0.1,
-        };
-        client.publish(topic, JSON.stringify(batteryData), () => {
-          console.log(`Published ${JSON.stringify(batteryData)} to ${topic}`);
-        });
-      });
-    }
-  }, 5000);
-});
+  // Cleanup on server shutdown
+  process.on('SIGTERM', () => {
+    mqttService.cleanup();
+    process.exit(0);
+  });
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+  return app;
+}
+
+if (require.main === module) {
+  const app = createServer();
+  const port = process.env.PORT || 3000;
+  
+  app.listen(port, () => {
+    console.log(`Server is running on http://localhost:${port}`);
+  });
+}
